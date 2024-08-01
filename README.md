@@ -28,13 +28,13 @@ These instructions will get you a copy of the project up and running on your loc
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/your-username/project-name.git
+   git clone https://github.com/nottysukku/Game_Site.git
    ```
 
 2. Navigate to the project directory:
 
    ```sh
-   cd project-name
+   cd Game_Site
    ```
 
 3. Install the dependencies:
@@ -60,7 +60,7 @@ These instructions will get you a copy of the project up and running on your loc
 ## Folder Structure
 
 ```
-project-name/
+Game_Site/
 ├── node_modules/
 ├── public/
 │   ├── favicon.ico

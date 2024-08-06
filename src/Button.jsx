@@ -9,7 +9,7 @@ const handleClick = () => {
   return (
     <div className='w-full h-screen bg-black flex items-center justify-center'>
       <button 
-        className="relative text-glow cursor-pointer px-6 py-2 border border-glow rounded-md bg-transparent text-base font-extrabold tracking-widest shadow-glow animate-border-flicker group transform transition-transform duration-500 hover:scale-105"
+        className="absolute text-glow cursor-pointer px-6 py-2 border border-glow rounded-md bg-transparent text-base font-extrabold tracking-widest shadow-glow animate-border-flicker group transform transition-transform duration-500 hover:scale-105"
         onClick={handleClick}
       >
         <span className="relative float-left -mr-4 text-shadow animate-text-flicker">
@@ -17,8 +17,11 @@ const handleClick = () => {
         </span>
         <div className="absolute inset-0 opacity-70 blur-md transform translate-y-20 rotate-x-95 scale-y-35 bg-glow pointer-events-none"></div>
         <div className="absolute inset-0 opacity-0 z-[-1] bg-glow shadow-glowHover transition-opacity duration-100 animate-scale-up"></div>
-      </button>
 
+      </button>
+      <div onClick={()=>{
+        window.location.href = 'https://game-site-orpin.vercel.app/';
+      }} className='text-white flex relative top-56  text-glow cursor-pointer px-6 py-2 border border-glow rounded-md bg-transparent text-base font-extrabold tracking-widest shadow-glow animate-border-flicker group transform transition-transform duration-500 hover:scale-105'>Back Home?</div>
     </div>
   );
 }

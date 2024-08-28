@@ -5,7 +5,7 @@ const Button2 = () => {
   return (
     <div className='w-full h-screen bg-black flex items-center justify-center'>
       <button onClick={()=>{
-        window.location.href = 'https://snake-js-vert.vercel.app/';
+        window.location.href = 'https://snakes-and-ladders-react-tailwind.vercel.app/';
       }} className="absolute text-glow cursor-pointer px-6 py-2 border border-glow rounded-md bg-transparent text-base font-extrabold tracking-widest shadow-glow animate-border-flicker group transform transition-transform duration-500 hover:scale-105">
         <span className="relative float-left -mr-4 text-shadow animate-text-flicker">
           P<span className="faulty-letter animate-faulty-flicker">L</span>AY Snakes and Ladders

@@ -5,7 +5,7 @@ function Foot() {
   return (
     <footer className="relative bg-gray-800 text-white py-16 overflow-hidden group">
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-800 to-indigo-700 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-800 to-blue-700 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
       
       {/* Footer content */}
       <div className="relative z-10 container mx-auto px-4">

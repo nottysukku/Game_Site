@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
 const images = [
-  'https://i.postimg.cc/pXXX4qWz/snake123.jpg',
-  'https://i.postimg.cc/4NrqVxSy/snakesandladders123.jpg',
-  'https://i.postimg.cc/TwG7dk3J/tictactoe.jpg',
+  'https://i.postimg.cc/C5LQnj3N/snake-day-FEATURED-desktop.png',
+  'https://i.postimg.cc/sgbSB7QR/1-NXKxy9-U-k-Yxi-Yk786ds-Ov-A.jpg',
+  'https://i.postimg.cc/nrFv1xGK/5-wooden-tic-tac-toe-gyanotoy-original-imagghzhdmgbqby4.webp',
 //  ' https://via.placeholder.com/1200x600.png?text=Image+1',
 // 'https://via.placeholder.com/1200x600.png?text=Image+2',
 // 'https://via.placeholder.com/1200x600.png?text=Image+3',

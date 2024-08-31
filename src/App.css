@@ -1,0 +1,31 @@
+.glowing-border {
+    position: relative;
+    border-radius: 1.5rem; /* 3xl rounded */
+    overflow: hidden;
+    width: 100%;
+    max-width: 64rem; /* max-w-4xl */
+    margin: 0 auto; /* mx-auto */
+  }
+  
+  .glowing-border::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border-radius: 1.75rem; /* Slightly larger for the glowing effect */
+    border: 8px solid transparent;
+    box-shadow: 0 0 20px 20px rgba(99, 102, 241, 0.5); /* Tailwind's indigo-600 with opacity for the glow */
+    animation: rotate-border 4s linear infinite;
+  }
+  
+  @keyframes rotate-border {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  

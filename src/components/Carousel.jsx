@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
-let img1='src/assets/snakemobile.jpg';
-let img2='src/assets/sandladder.jpg';
-let img3='src/assets/tictactoe.jpg';
+let img1='src/assets/snakemobile.png';
+let img2='src/assets/sandladder.png';
+let img3='src/assets/tictactoe.png';
 
 const images = [
   img1,

@@ -1,21 +1,10 @@
 import React, { useState } from 'react';
 
-let img1='src/assets/snakemobile.png';
-let img2='src/assets/sandladder.png';
-let img3='src/assets/tictactoe.png';
+const img1 = 'https://i.imgur.com/m0avwuP.png';
+const img2 = 'https://i.imgur.com/ZXdFwrh.jpeg';
+const img3 = 'https://m.media-amazon.com/images/I/81-JkdF5yFL._AC_UF1000,1000_QL80_.jpg';
 
-const images = [
-  img1,
-  img2,
-  img3
-  // 'https://i.postimg.cc/C5LQnj3N/snake-day-FEATURED-desktop.png',
-
-  // 'https://i.postimg.cc/sgbSB7QR/1-NXKxy9-U-k-Yxi-Yk786ds-Ov-A.jpg',
-  // 'https://i.postimg.cc/nrFv1xGK/5-wooden-tic-tac-toe-gyanotoy-original-imagghzhdmgbqby4.webp',
-//  ' https://via.placeholder.com/1200x600.png?text=Image+1',
-// 'https://via.placeholder.com/1200x600.png?text=Image+2',
-// 'https://via.placeholder.com/1200x600.png?text=Image+3',
-];
+const images = [img1, img2, img3];
 
 const Carousel = ({ onTicTacToeClick, onSnakeClick, onSnakesandLaddersClick }) => {
   const [currentIndex, setCurrentIndex] = useState(0);

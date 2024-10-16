@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 
+let img1='src/assets/snakemobile.jpg';
+let img2='src/assets/sandladder.jpg';
+let img3='src/assets/tictactoe.jpg';
+
 const images = [
-  'https://i.postimg.cc/C5LQnj3N/snake-day-FEATURED-desktop.png',
-  'https://i.postimg.cc/sgbSB7QR/1-NXKxy9-U-k-Yxi-Yk786ds-Ov-A.jpg',
-  'https://i.postimg.cc/nrFv1xGK/5-wooden-tic-tac-toe-gyanotoy-original-imagghzhdmgbqby4.webp',
+  img1,
+  img2,
+  img3
+  // 'https://i.postimg.cc/C5LQnj3N/snake-day-FEATURED-desktop.png',
+
+  // 'https://i.postimg.cc/sgbSB7QR/1-NXKxy9-U-k-Yxi-Yk786ds-Ov-A.jpg',
+  // 'https://i.postimg.cc/nrFv1xGK/5-wooden-tic-tac-toe-gyanotoy-original-imagghzhdmgbqby4.webp',
 //  ' https://via.placeholder.com/1200x600.png?text=Image+1',
 // 'https://via.placeholder.com/1200x600.png?text=Image+2',
 // 'https://via.placeholder.com/1200x600.png?text=Image+3',

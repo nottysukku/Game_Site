@@ -14,7 +14,7 @@ const Button1 = () => {
         <div className="absolute inset-0 opacity-0 z-[-1] bg-glow shadow-glowHover transition-opacity duration-100 animate-scale-up"></div>
       </button>
       <div onClick={()=>{
-        window.location.href = 'https://game-site-orpin.vercel.app/';
+        window.location.href = 'https://gamesite-sc.netlify.app/';
       }} className='text-white flex relative top-56  text-glow cursor-pointer px-6 py-2 border border-glow rounded-md bg-transparent text-base font-extrabold tracking-widest shadow-glow animate-border-flicker group transform transition-transform duration-500 hover:scale-105'>Back Home?</div>
     </div>
   );

@@ -1,0 +1,46 @@
+.r4-root {
+  width: 100vw;
+  min-height: 100vh;
+  position: relative;
+  background-color: #06070c;
+  overflow: hidden;
+  padding-bottom: 2rem;
+}
+
+.r4-canvas {
+  display: block;
+  max-width: 95%;
+  height: auto;
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(6,182,212,0.15);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.r4-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 7, 12, 0.95);
+  z-index: 100;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: 1.5rem;
+  box-shadow: 0 0 50px rgba(6, 182, 212, 0.15);
+  width: 500px;
+  height: 440px;
+  margin: 80px auto;
+  padding: 2rem;
+}
+
+.r4-overlay h1 {
+  font-size: 3rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.r4-overlay p {
+  color: #a1a1aa;
+  font-size: 0.8rem;
+  text-align: center;
+  max-width: 90%;
+}

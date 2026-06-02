@@ -76,6 +76,7 @@ export default function Badminton() {
         this.armAngle = isPlayer2 ? Math.PI : 0;
         this.swinging = false;
         this.swingTimer = 0;
+        this.swingType = 'upstroke'; // 'upstroke' | 'downstroke'
       }
 
       update() {
@@ -91,6 +92,12 @@ export default function Badminton() {
           if (keys['Space'] && !this.swinging) {
             this.swinging = true;
             this.swingTimer = 20;
+            this.swingType = 'upstroke';
+          }
+          if ((keys['KeyS'] || keys['ShiftLeft']) && !this.swinging) {
+            this.swinging = true;
+            this.swingTimer = 20;
+            this.swingType = 'downstroke';
           }
         } else {
           if (keys['ArrowLeft']) { this.vx = -this.speed; moving = true; }
@@ -103,6 +110,12 @@ export default function Badminton() {
           if ((keys['Enter'] || keys['ShiftRight'] || keys['KeyL']) && !this.swinging) {
             this.swinging = true;
             this.swingTimer = 20;
+            this.swingType = 'upstroke';
+          }
+          if ((keys['ArrowDown'] || keys['KeyK']) && !this.swinging) {
+            this.swinging = true;
+            this.swingTimer = 20;
+            this.swingType = 'downstroke';
           }
         }
 
@@ -142,12 +155,23 @@ export default function Badminton() {
           this.swingTimer--;
           const progress = 1 - (this.swingTimer / 20);
           
-          if (!this.isPlayer2) {
-             // swing from 0 to -PI
-             this.armAngle = Math.PI/4 - progress * Math.PI * 1.5;
+          if (this.swingType === 'upstroke') {
+            if (!this.isPlayer2) {
+              // swing from PI/4 to -PI
+              this.armAngle = Math.PI/4 - progress * Math.PI * 1.5;
+            } else {
+              // swing from PI*3/4 to 2PI
+              this.armAngle = Math.PI*3/4 + progress * Math.PI * 1.5;
+            }
           } else {
-             // swing from PI to 2PI
-             this.armAngle = Math.PI*3/4 + progress * Math.PI * 1.5;
+            // DOWNSTROKE / SMASH SWING
+            if (!this.isPlayer2) {
+              // starts high behind, swings forward and down
+              this.armAngle = -Math.PI * 0.5 + progress * Math.PI * 1.25;
+            } else {
+              // starts high behind, swings forward and down
+              this.armAngle = Math.PI * 1.5 - progress * Math.PI * 1.25;
+            }
           }
 
           if (this.swingTimer <= 0) {
@@ -261,9 +285,8 @@ export default function Badminton() {
 
     class Shuttlecock {
       constructor() {
-        this.reset(1);
         this.radius = 8;
-        this.active = false;
+        this.reset(1);
       }
       
       reset(server) {
@@ -403,35 +426,31 @@ export default function Badminton() {
           const hitAngle = Math.atan2(birdie.y - racketPos.y, birdie.x - racketPos.x);
           
           let power = 22;
+          const isSmash = player.swingType === 'downstroke';
           
-          // Smash logic: if birdie is high and player jumps
-          let isSmash = false;
-          if (player.y < groundY - 20 && birdie.y < racketPos.y + 10) {
-            power = 35;
-            isSmash = true;
+          if (isSmash) {
+            power = 32; // high power for downstroke smash
           }
           
-          // Add player velocity contribution
           let bx = Math.cos(hitAngle) * power + player.vx * 0.5;
-          let by = Math.sin(hitAngle) * power - 5; // always impart some upward force initially
+          let by = Math.sin(hitAngle) * power;
           
-          // Ensure it goes over net (rough heuristic)
-          if (!isSmash) {
-            if (player.isPlayer2) {
-              if (bx > -5) bx = -15;
-              if (by > -5) by = -15;
-            } else {
-              if (bx < 5) bx = 15;
-              if (by > -5) by = -15;
-            }
-          } else {
-             // Smash goes straight down hard
-             bx = player.isPlayer2 ? -30 : 30;
-             by = 15;
-             screenShake = 20;
-             spawnParticles(racketPos.x, racketPos.y, '#ff9800', 30, 10);
+          if (isSmash) {
+             // Smash forces shuttlecock downwards
+             bx = player.isPlayer2 ? -28 : 28;
+             by = 16; // hard downwards
+             screenShake = 22;
+             spawnParticles(racketPos.x, racketPos.y, '#ffd166', 30, 8);
              setAnnouncement("SMASH!");
-             setTimeout(() => { if(announcement==="SMASH!") setAnnouncement("")}, 1000);
+             setTimeout(() => { if (announcement === "SMASH!") setAnnouncement("") }, 1000);
+          } else {
+             // Upstroke: force upward angle
+             by = -14;
+             if (player.isPlayer2) {
+               if (bx > -5) bx = -15;
+             } else {
+               if (bx < 5) bx = 15;
+             }
           }
 
           birdie.vx = bx;
@@ -561,13 +580,15 @@ export default function Badminton() {
       <div className="absolute top-4 left-4 right-4 flex justify-between px-10 pointer-events-none">
         <div className="text-white bg-black/50 p-4 rounded-xl backdrop-blur-sm border border-white/20">
           <h3 className="font-bold text-red-400 mb-2">PLAYER 1</h3>
-          <p className="text-sm">W A D - Move/Jump</p>
-          <p className="text-sm">SPACE - Swing</p>
+          <p className="text-sm">A D - Move | W - Jump</p>
+          <p className="text-sm">SPACE - Upstroke Swing</p>
+          <p className="text-sm">S / L-SHIFT - Smash Downstroke</p>
         </div>
         <div className="text-white bg-black/50 p-4 rounded-xl backdrop-blur-sm border border-white/20 text-right">
           <h3 className="font-bold text-blue-400 mb-2">PLAYER 2</h3>
-          <p className="text-sm">Arrows - Move/Jump</p>
-          <p className="text-sm">ENTER / L - Swing</p>
+          <p className="text-sm">← → - Move | ↑ - Jump</p>
+          <p className="text-sm">ENTER / L - Upstroke Swing</p>
+          <p className="text-sm">↓ / K - Smash Downstroke</p>
         </div>
       </div>
 

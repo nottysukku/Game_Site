@@ -52,7 +52,8 @@ const games = [
   { path: '/turbototem3d', icon: '🗿', title: 'Turbo Totem 3D', desc: '3-4P totem checkpoint sprint', color: '#ffe082' },
   { path: '/vaultraid3d', icon: '🏦', title: 'Vault Raid 3D', desc: '3-4P high-value orb raid', color: '#80deea' },
   { path: '/badminton', icon: '🏸', title: 'Badminton', desc: '1v1 Stickman local multiplayer', color: '#87CEEB' },
-  { path: '/soccerheads', icon: '⚽', title: 'Soccer Heads', desc: '1v1 physics with superpowers', color: '#ff5252' }
+  { path: '/soccerheads', icon: '⚽', title: 'Soccer Heads', desc: '1v1 physics with superpowers', color: '#ff5252' },
+  { path: '/racing4p', icon: '🏎️', title: '2D Racer 4P', desc: '4P Top-down grand prix with CPU drivers', color: '#00ffd4' }
 ];
 
 const FuturisticCarouselContainer = ({ children }) => {

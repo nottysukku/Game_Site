@@ -67,51 +67,110 @@ export default function Carousel() {
   const displayedGames = gamesList.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
 
   return (
-    <div className="w-full flex flex-col items-center py-8 z-20">
-      <div className="flex items-center w-full justify-between px-4 sm:px-12">
-        <button onClick={prevPage} className="p-4 text-white bg-black/50 hover:bg-white/20 rounded-full transition-all shadow-xl z-20 hover:scale-110">
-          <ChevronLeft size={36} />
+    <div className="w-full flex flex-col items-center py-6 z-20">
+      <div className="flex items-center w-full justify-between gap-2 sm:gap-6">
+        
+        {/* Left Arrow button */}
+        <button
+          onClick={prevPage}
+          className="relative group p-3.5 md:p-4 text-cyan-400 bg-black/55 hover:text-white border border-cyan-500/20 hover:border-cyan-400 rounded-full transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] z-20 hover:scale-110"
+        >
+          <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
         </button>
         
-        <div className="flex-grow overflow-hidden px-4 md:px-8 max-w-7xl">
+        {/* Games display container */}
+        <div className="flex-grow overflow-hidden px-2 md:px-6 max-w-7xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={page}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.4 }}
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5 md:gap-6"
             >
-              {displayedGames.map((g) => (
+              {displayedGames.map((g, idx) => (
                 <motion.div
-                  whileHover={{ scale: 1.05, y: -10 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.06, y: -8 }}
+                  whileTap={{ scale: 0.96 }}
                   key={g.path}
                   onClick={() => navigate(g.path)}
-                  className="relative cursor-pointer bg-black/40 backdrop-blur-md border border-white/20 rounded-3xl p-6 flex flex-col items-center text-center shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all overflow-hidden group min-h-[220px]"
+                  className="relative cursor-pointer bg-[#0c0d1b]/60 backdrop-blur-md rounded-2xl p-5 flex flex-col items-center text-center shadow-[0_0_20px_rgba(0,0,0,0.6)] transition-all overflow-hidden group min-h-[240px] border border-cyan-500/10"
+                  style={{
+                    '--hover-glow': g.color
+                  }}
                 >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-300" style={{ backgroundColor: g.color }} />
-                  <span className="text-6xl mb-4 transform group-hover:scale-125 transition-transform duration-300">{g.icon}</span>
-                  <h3 className="text-white font-black text-xl mb-2 relative z-10">{g.title}</h3>
-                  <p className="text-gray-300 text-xs font-semibold relative z-10">{g.desc}</p>
+                  {/* Subtle Glowing Radial Background Highlight */}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-[0.18] transition-opacity duration-300 pointer-events-none"
+                    style={{
+                      background: `radial-gradient(circle at center, ${g.color} 0%, transparent 70%)`
+                    }}
+                  />
+
+                  {/* Corner bracket styling */}
+                  <div className="absolute top-2 left-2 text-[8px] text-cyan-400/30 font-mono tracking-widest pointer-events-none group-hover:text-cyan-400/60 transition-colors">
+                    +
+                  </div>
+                  <div className="absolute top-2 right-2 text-[8px] text-cyan-400/30 font-mono tracking-widest pointer-events-none group-hover:text-cyan-400/60 transition-colors">
+                    +
+                  </div>
+
+                  {/* Active Neon Border Highlight on Hover */}
+                  <div
+                    className="absolute inset-0 border border-transparent rounded-2xl group-hover:border-current transition-colors duration-300 pointer-events-none"
+                    style={{ color: g.color }}
+                  />
+
+                  {/* High Tech Reticle around Emoji Icon */}
+                  <div className="relative mb-4 mt-2">
+                    <div
+                      className="absolute inset-0 rounded-full border border-cyan-500/10 group-hover:border-current group-hover:animate-spin duration-1000 pointer-events-none scale-125"
+                      style={{ color: g.color, animationDuration: '4s' }}
+                    />
+                    <span className="relative z-10 text-5xl transform group-hover:scale-110 transition-transform duration-300 block">
+                      {g.icon}
+                    </span>
+                  </div>
+
+                  {/* Game Text */}
+                  <h3 className="text-white font-bold text-lg mb-2 relative z-10 font-sans tracking-wide group-hover:text-cyan-200 transition-colors">
+                    {g.title}
+                  </h3>
+                  <p className="text-gray-400 text-xs leading-tight relative z-10 flex-grow font-medium">
+                    {g.desc}
+                  </p>
+
+                  {/* System Tag at Bottom */}
+                  <div className="font-mono text-[8px] text-gray-500/60 mt-4 tracking-widest group-hover:text-white/40 transition-colors">
+                    [ SEC_S.{page * itemsPerPage + idx + 1} / READY ]
+                  </div>
                 </motion.div>
               ))}
             </motion.div>
           </AnimatePresence>
         </div>
 
-        <button onClick={nextPage} className="p-4 text-white bg-black/50 hover:bg-white/20 rounded-full transition-all shadow-xl z-20 hover:scale-110">
-          <ChevronRight size={36} />
+        {/* Right Arrow button */}
+        <button
+          onClick={nextPage}
+          className="relative group p-3.5 md:p-4 text-cyan-400 bg-black/55 hover:text-white border border-cyan-500/20 hover:border-cyan-400 rounded-full transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] z-20 hover:scale-110"
+        >
+          <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
         </button>
       </div>
       
-      <div className="flex justify-center mt-8 space-x-3">
+      {/* Paging Indicators */}
+      <div className="flex justify-center mt-10 space-x-3">
         {Array.from({ length: totalPages }).map((_, i) => (
           <button
             key={i}
             onClick={() => setPage(i)}
-            className={`transition-all rounded-full ${i === page ? 'bg-cyan-400 w-8 h-3 shadow-[0_0_10px_cyan]' : 'bg-gray-600 w-3 h-3 hover:bg-gray-400'}`}
+            className={`transition-all duration-300 rounded-full h-2.5 ${
+              i === page 
+                ? 'bg-cyan-400 w-8 shadow-[0_0_10px_rgba(6,182,212,0.8)]' 
+                : 'bg-gray-700 w-2.5 hover:bg-cyan-500/50'
+            }`}
           />
         ))}
       </div>

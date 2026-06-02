@@ -191,6 +191,294 @@ function rankingText(scores) {
     .join(' | ');
 }
 
+// DYNAMIC 3D WORLD AND SCENERY ENGINE FOR EVERY GAME VARIANT
+function generateGameWorld(engine, variant) {
+  const scene = engine.scene;
+  const worldAssets = [];
+  engine.worldAssets = worldAssets;
+
+  if (variant === 'tag') {
+    // 1. Neon Tag Arena - Glowing Pillars & Center Holographic Tower
+    const pillarGeo = new THREE.BoxGeometry(2.5, 7.5, 2.5);
+    const pillarMat = new THREE.MeshStandardMaterial({
+      color: 0x0984e3,
+      emissive: 0x0984e3,
+      emissiveIntensity: 0.2,
+      roughness: 0.1,
+      metalness: 0.95
+    });
+
+    const coords = [[11, 11], [-11, 11], [11, -11], [-11, -11]];
+    coords.forEach(([px, pz]) => {
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(px, 3.75, pz);
+      pillar.castShadow = true;
+      pillar.receiveShadow = true;
+      scene.add(pillar);
+      
+      const neonBorder = new THREE.Mesh(
+        new THREE.BoxGeometry(2.7, 0.3, 2.7),
+        new THREE.MeshBasicMaterial({ color: 0x00f5d4 })
+      );
+      neonBorder.position.set(px, 7.6, pz);
+      scene.add(neonBorder);
+
+      worldAssets.push(pillar, neonBorder);
+      engine.obstacles.push({
+        position: new THREE.Vector3(px, 0.5, pz),
+        radius: 1.8
+      });
+    });
+
+    // Central Spinning Holographic Database
+    const centerTorus = new THREE.Mesh(
+      new THREE.TorusGeometry(2.2, 0.22, 10, 36),
+      new THREE.MeshBasicMaterial({ color: 0x00f5d4, transparent: true, opacity: 0.85 })
+    );
+    centerTorus.rotation.x = Math.PI / 2;
+    centerTorus.position.set(0, 4.0, 0);
+    scene.add(centerTorus);
+    worldAssets.push(centerTorus);
+
+    engine.activeEffects.push({
+      mesh: centerTorus,
+      update: (dt) => {
+        centerTorus.rotation.z += dt * 1.6;
+        centerTorus.position.y = 4.0 + Math.sin(engine.elapsed * 2.2) * 0.75;
+        return false;
+      }
+    });
+
+    engine.obstacles.push({ position: new THREE.Vector3(0, 0.5, 0), radius: 1.4 });
+  } 
+  else if (variant === 'collect') {
+    // 2. Crystal Comet Clash - Low Poly Floating Asteroids & Glowing Crystals
+    const crystalGeo = new THREE.ConeGeometry(0.35, 1.8, 5);
+    const crystalMat = new THREE.MeshStandardMaterial({
+      color: 0xf472b6,
+      emissive: 0xf472b6,
+      emissiveIntensity: 0.65,
+      roughness: 0.05
+    });
+
+    const crystalPositions = [[7, 5], [-8, 6], [5, -9], [-6, -7], [0, 8], [0, -8]];
+    crystalPositions.forEach(([px, pz], idx) => {
+      const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+      crystal.position.set(px, 0.8, pz);
+      crystal.rotation.x = (Math.random() - 0.5) * 0.45;
+      crystal.rotation.z = (Math.random() - 0.5) * 0.45;
+      crystal.castShadow = true;
+      scene.add(crystal);
+      worldAssets.push(crystal);
+      engine.obstacles.push({ position: new THREE.Vector3(px, 0.5, pz), radius: 0.85 });
+    });
+
+    // Floating asteroids drifting in background
+    const asteroidGeo = new THREE.DodecahedronGeometry(1.6, 1);
+    const asteroidMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.96 });
+    for (let i = 0; i < 4; i++) {
+      const asteroid = new THREE.Mesh(asteroidGeo, asteroidMat);
+      const angle = (i * Math.PI) / 2 + 0.35;
+      asteroid.position.set(Math.cos(angle) * 31, 5.5 + Math.random() * 4, Math.sin(angle) * 31);
+      scene.add(asteroid);
+      worldAssets.push(asteroid);
+
+      const rotateSpeed = new THREE.Vector3(Math.random() * 0.15, Math.random() * 0.15, Math.random() * 0.15);
+      engine.activeEffects.push({
+        mesh: asteroid,
+        update: (dt) => {
+          asteroid.rotation.x += rotateSpeed.x * dt;
+          asteroid.rotation.y += rotateSpeed.y * dt;
+          asteroid.rotation.z += rotateSpeed.z * dt;
+          return false;
+        }
+      });
+    }
+  } 
+  else if (variant === 'bomb') {
+    // 3. Volcanic Magma Chamber - Shifting Lava Plane, Obsidian Spires, Heat Embers
+    const lavaGeo = new THREE.PlaneGeometry(150, 150, 16, 16);
+    const lavaMat = new THREE.MeshBasicMaterial({ color: 0xff3d00, transparent: true, opacity: 0.8, wireframe: false });
+    const lava = new THREE.Mesh(lavaGeo, lavaMat);
+    lava.rotation.x = -Math.PI / 2;
+    lava.position.y = -4.5;
+    scene.add(lava);
+    worldAssets.push(lava);
+
+    // Dark Spire Volcanoes
+    const spireGeo = new THREE.ConeGeometry(1.5, 8.5, 6);
+    const spireMat = new THREE.MeshStandardMaterial({ color: 0x1a1512, roughness: 0.92 });
+    const spirePositions = [[14, 0], [-14, 0], [0, 14], [0, -14]];
+    spirePositions.forEach(([px, pz]) => {
+      const spire = new THREE.Mesh(spireGeo, spireMat);
+      spire.position.set(px, 3.8, pz);
+      spire.castShadow = true;
+      scene.add(spire);
+      worldAssets.push(spire);
+      engine.obstacles.push({ position: new THREE.Vector3(px, 0.5, pz), radius: 1.85 });
+    });
+
+    // Subterranean glowing heat embers
+    const emberCount = 50;
+    const emberGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(emberCount * 3);
+    for (let i = 0; i < emberCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 75;
+      positions[i * 3 + 1] = -4 + Math.random() * 22;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 75;
+    }
+    emberGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const emberMat = new THREE.PointsMaterial({ color: 0xffa000, size: 0.35, transparent: true, opacity: 0.85 });
+    const embers = new THREE.Points(emberGeo, emberMat);
+    scene.add(embers);
+    worldAssets.push(embers);
+
+    engine.activeEffects.push({
+      mesh: embers,
+      update: (dt) => {
+        const posAttr = emberGeo.getAttribute('position');
+        for (let i = 0; i < emberCount; i++) {
+          let y = posAttr.getY(i);
+          y += dt * 3.8;
+          if (y > 22) y = -4.0;
+          posAttr.setY(i, y);
+
+          let x = posAttr.getX(i);
+          x += Math.sin(engine.elapsed + i) * 0.06;
+          posAttr.setX(i, x);
+        }
+        posAttr.needsUpdate = true;
+
+        // Wave magma shifting
+        lava.position.y = -4.5 + Math.sin(engine.elapsed * 1.8) * 0.35;
+        return false;
+      }
+    });
+  } 
+  else if (variant === 'zone') {
+    // 4. Underwater Neon Dome - Swaying Seaweed & Oxygen Rising Bubbles
+    const weedGeo = new THREE.PlaneGeometry(1.2, 7.5, 1, 8);
+    const weedMat = new THREE.MeshStandardMaterial({
+      color: 0x10b981,
+      transparent: true,
+      opacity: 0.82,
+      side: THREE.DoubleSide,
+      roughness: 0.85
+    });
+
+    const weedPositions = [[11, 7], [-11, -7], [7, -11], [-7, 11]];
+    weedPositions.forEach(([px, pz], idx) => {
+      const weed = new THREE.Mesh(weedGeo, weedMat);
+      weed.position.set(px, 3.2, pz);
+      scene.add(weed);
+      worldAssets.push(weed);
+      engine.obstacles.push({ position: new THREE.Vector3(px, 0.5, pz), radius: 1.0 });
+
+      engine.activeEffects.push({
+        mesh: weed,
+        update: (dt) => {
+          weed.rotation.y = Math.sin(engine.elapsed * 1.35 + idx) * 0.3;
+          weed.rotation.z = Math.cos(engine.elapsed * 0.9 + idx) * 0.16;
+          return false;
+        }
+      });
+    });
+
+    // Bubbles generator
+    const bubbleCount = 45;
+    const bubbleGeo = new THREE.BufferGeometry();
+    const bubblePositions = new Float32Array(bubbleCount * 3);
+    for (let i = 0; i < bubbleCount; i++) {
+      bubblePositions[i * 3] = (Math.random() - 0.5) * 65;
+      bubblePositions[i * 3 + 1] = -4 + Math.random() * 24;
+      bubblePositions[i * 3 + 2] = (Math.random() - 0.5) * 65;
+    }
+    bubbleGeo.setAttribute('position', new THREE.BufferAttribute(bubblePositions, 3));
+    const bubbleMat = new THREE.PointsMaterial({ color: 0x81ecec, size: 0.3, transparent: true, opacity: 0.65 });
+    const bubbles = new THREE.Points(bubbleGeo, bubbleMat);
+    scene.add(bubbles);
+    worldAssets.push(bubbles);
+
+    engine.activeEffects.push({
+      mesh: bubbles,
+      update: (dt) => {
+        const posAttr = bubbleGeo.getAttribute('position');
+        for (let i = 0; i < bubbleCount; i++) {
+          let y = posAttr.getY(i);
+          y += dt * 4.2;
+          if (y > 22) y = -4.0;
+          posAttr.setY(i, y);
+        }
+        posAttr.needsUpdate = true;
+        return false;
+      }
+    });
+  } 
+  else if (variant === 'meteor') {
+    // 5. Sky-Dock Cloud Platform - Drifting Clouds Under Stage & Steel Girders
+    const cloudGroup = new THREE.Group();
+    scene.add(cloudGroup);
+    worldAssets.push(cloudGroup);
+
+    const cMat = new THREE.MeshStandardMaterial({ color: 0xf3f4f6, roughness: 0.88, transparent: true, opacity: 0.38 });
+    const cloudGeo = new THREE.SphereGeometry(6, 8, 8);
+    for (let i = 0; i < 6; i++) {
+      const cloud = new THREE.Mesh(cloudGeo, cMat);
+      cloud.position.set((Math.random() - 0.5) * 80, -9 - Math.random() * 5, (Math.random() - 0.5) * 80);
+      cloud.scale.set(1.9, 0.42, 1.35);
+      cloudGroup.add(cloud);
+
+      engine.activeEffects.push({
+        mesh: cloud,
+        update: (dt) => {
+          cloud.position.x += dt * 3.2;
+          if (cloud.position.x > 80) cloud.position.x = -80;
+          return false;
+        }
+      });
+    }
+
+    // Steel structure columns
+    const girderGeo = new THREE.BoxGeometry(0.35, 7.5, 0.35);
+    const girderMat = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.88, roughness: 0.35 });
+    const girderCoords = [[13, 9], [-13, -9]];
+    girderCoords.forEach(([px, pz]) => {
+      const girder = new THREE.Mesh(girGeo, girderMat);
+      girder.position.set(px, 3.6, pz);
+      girder.rotation.z = Math.PI / 4;
+      scene.add(girder);
+      worldAssets.push(girder);
+      engine.obstacles.push({ position: new THREE.Vector3(px, 0.5, pz), radius: 1.0 });
+    });
+  } 
+  else if (variant === 'dash') {
+    // 6. Synthwave Grandstand - Starting Gate Arches
+    const arch = new THREE.Group();
+    scene.add(arch);
+    worldAssets.push(arch);
+
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.85, roughness: 0.2 });
+    const neonBarMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+
+    const leftCol = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 5.8, 8), pillarMat);
+    leftCol.position.set(-5.5, 2.9, 0);
+    const rightCol = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 5.8, 8), pillarMat);
+    rightCol.position.set(5.5, 2.9, 0);
+    
+    const crossbar = new THREE.Mesh(new THREE.BoxGeometry(11.8, 0.35, 0.35), neonBarMat);
+    crossbar.position.set(0, 5.8, 0);
+
+    arch.add(leftCol, rightCol, crossbar);
+    arch.position.set(0, 0, 13); // Setup racetrack gate
+    worldAssets.push(leftCol, rightCol, crossbar);
+
+    engine.obstacles.push(
+      { position: new THREE.Vector3(-5.5, 0.5, 13), radius: 0.85 },
+      { position: new THREE.Vector3(5.5, 0.5, 13), radius: 0.85 }
+    );
+  }
+}
+
 export default function PartyArenaCore({ config }) {
   const merged = useMemo(() => ({ ...DEFAULTS, ...config, palette: { ...DEFAULTS.palette, ...(config.palette || {}) } }), [config]);
   const mountRef = useRef(null);
@@ -350,70 +638,6 @@ export default function PartyArenaCore({ config }) {
 
     // BUILD VARIANT SPECIFIC SCENERY / OBSTACLES
     const activeObstacles = [];
-    if (merged.variant === 'tag') {
-      // Tag - Build 4 glowing towers to act as obstacles to weave around
-      const pillarGeo = new THREE.BoxGeometry(2.2, 7, 2.2);
-      const pillarMat = new THREE.MeshStandardMaterial({
-        color: merged.palette.wall,
-        emissive: merged.palette.wall,
-        emissiveIntensity: 0.3,
-        roughness: 0.2
-      });
-      const coords = [[10, 10], [-10, 10], [10, -10], [-10, -10]];
-      coords.forEach(([px, pz]) => {
-        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-        pillar.position.set(px, 3.5, pz);
-        pillar.castShadow = true;
-        pillar.receiveShadow = true;
-        scene.add(pillar);
-        activeObstacles.push({
-          position: new THREE.Vector3(px, 0.5, pz),
-          radius: 1.6
-        });
-      });
-    } 
-    else if (merged.variant === 'collect') {
-      // Collect - Build a floating futuristic comet core portal in the center
-      const portalCore = new THREE.Mesh(
-        new THREE.TorusGeometry(2.5, 0.35, 16, 48),
-        new THREE.MeshStandardMaterial({ color: 0x78ffd6, emissive: 0x78ffd6, emissiveIntensity: 0.4 })
-      );
-      portalCore.rotation.y = Math.PI / 4;
-      portalCore.position.set(0, 4, 0);
-      scene.add(portalCore);
-      activeObstacles.push({ portal: portalCore, rotationSpeed: 1.2 });
-    }
-    else if (merged.variant === 'bomb') {
-      // Bomb - Central high voltage warning spire
-      const spire = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.1, 0.9, 8, 12),
-        new THREE.MeshStandardMaterial({ color: 0xff3d00, emissive: 0xff3d00, emissiveIntensity: 0.4 })
-      );
-      spire.position.set(0, 4, 0);
-      scene.add(spire);
-      activeObstacles.push({
-        position: new THREE.Vector3(0, 0.5, 0),
-        radius: 1.2
-      });
-    }
-    else if (merged.variant === 'dash') {
-      // Dash - Draw glowing speed chevron plates on the floor
-      const chevrons = [];
-      const padPositions = [[14, 14], [-14, 14], [14, -14], [-14, -14]];
-      padPositions.forEach(([px, pz]) => {
-        const pad = new THREE.Mesh(
-          new THREE.BoxGeometry(3, 0.12, 3),
-          new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.6 })
-        );
-        pad.position.set(px, 0.56, pz);
-        scene.add(pad);
-        chevrons.push({
-          position: new THREE.Vector3(px, 0.56, pz),
-          radius: 2.2
-        });
-      });
-      engineRef.current_chevrons = chevrons;
-    }
 
     const players = [];
     const scoresRef = [0, 0, 0, 0];
@@ -518,6 +742,19 @@ export default function PartyArenaCore({ config }) {
         if (renderer.domElement.parentElement === mountRef.current) {
           mountRef.current.removeChild(renderer.domElement);
         }
+
+        // Clean up custom world assets to prevent memory leaks
+        if (engine.worldAssets) {
+          engine.worldAssets.forEach(mesh => {
+            if (mesh.geometry) mesh.geometry.dispose();
+            if (mesh.material) {
+              if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose());
+              else mesh.material.dispose();
+            }
+            scene.remove(mesh);
+          });
+        }
+
         renderer.dispose();
       },
     };
@@ -541,6 +778,9 @@ export default function PartyArenaCore({ config }) {
     };
     window.addEventListener('resize', engine.handleResize);
     engine.handleResize();
+
+    // Invoke dedicated World Scenery builder before returning
+    generateGameWorld(engine, merged.variant);
 
     engineRef.current = engine;
     return engine;

@@ -37,6 +37,8 @@ export default function Racing() {
 
   // Game UI States
   const [phase, setPhase] = useState('menu'); // menu | playing | over
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
   const [lap, setLap] = useState(1);
   const [speed, setSpeed] = useState(0);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -639,7 +641,7 @@ export default function Racing() {
       });
 
       // --- PLAYER PHYSICS LOOP ---
-      if (phase === 'playing') {
+      if (phaseRef.current === 'playing') {
         // Spin Timer
         if (playerPhysics.spinTimer > 0) {
           playerPhysics.spinTimer -= dt;
@@ -815,7 +817,7 @@ export default function Racing() {
 
       // --- CPU AI COMPETITORS LOOP ---
       rivals.forEach((ai) => {
-        if (phase === 'playing') {
+        if (phaseRef.current === 'playing') {
           // Spin mechanics
           if (ai.spinTimer > 0) {
             ai.spinTimer -= dt;
@@ -1194,9 +1196,9 @@ export default function Racing() {
               <li className="text-yellow-400">Drive over yellow ZIPPERS for Speed Boosts!</li>
             </ul>
           </div>
-
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.currentTarget.blur();
               setPhase('playing');
               stateRef.current.restart?.();
             }}
@@ -1282,7 +1284,10 @@ export default function Racing() {
           </div>
           
           <button
-            onClick={() => stateRef.current.restart?.()}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              stateRef.current.restart?.();
+            }}
             className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold tracking-widest uppercase rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
           >
             RE-ENGAGE ENGINES

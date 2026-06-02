@@ -408,7 +408,6 @@ export default function Badminton() {
     
     let scoreP1 = 0;
     let scoreP2 = 0;
-
     function checkRacketCollision(player, birdie) {
       if (player.swinging && birdie.active) {
         // If the birdie is not served, only the server can strike it
@@ -416,50 +415,64 @@ export default function Badminton() {
         if (!birdie.isServed && birdie.server === 2 && !player.isPlayer2) return;
 
         const racketPos = player.getRacketWorldPos();
-        
-        const dist = Math.hypot(birdie.x - racketPos.x, birdie.y - racketPos.y);
-        
-        // A wider hit box for gameplay fun
-        if (dist < 60 && player.swingTimer > 10 && player.swingTimer < 18) { 
-          // Hit!
-          birdie.isServed = true;
-          const hitAngle = Math.atan2(birdie.y - racketPos.y, birdie.x - racketPos.x);
-          
-          let power = 22;
-          const isSmash = player.swingType === 'downstroke';
-          
-          if (isSmash) {
-            power = 32; // high power for downstroke smash
+        let shouldHit = false;
+        let isServeLaunch = false;
+
+        if (!birdie.isServed) {
+          // Instant serve launch on swing!
+          if (player.swingTimer > 10 && player.swingTimer < 20) {
+            shouldHit = true;
+            isServeLaunch = true;
           }
+        } else {
+          // Normal gameplay collision
+          const dist = Math.hypot(birdie.x - racketPos.x, birdie.y - racketPos.y);
+          if (dist < 65 && player.swingTimer > 10 && player.swingTimer < 19) {
+            shouldHit = true;
+          }
+        }
+
+        if (shouldHit) {
+          birdie.isServed = true;
           
-          let bx = Math.cos(hitAngle) * power + player.vx * 0.5;
-          let by = Math.sin(hitAngle) * power;
-          
-          if (isSmash) {
-             // Smash forces shuttlecock downwards
-             bx = player.isPlayer2 ? -28 : 28;
-             by = 16; // hard downwards
-             screenShake = 22;
-             spawnParticles(racketPos.x, racketPos.y, '#ffd166', 30, 8);
-             setAnnouncement("SMASH!");
-             setTimeout(() => { if (announcement === "SMASH!") setAnnouncement("") }, 1000);
+          let bx = 0;
+          let by = 0;
+          const isSmash = player.swingType === 'downstroke';
+
+          if (isServeLaunch) {
+            // Perfect serve arch
+            bx = player.isPlayer2 ? -15 : 15;
+            by = -14;
+            spawnParticles(birdie.x, birdie.y, '#fff', 12, 4);
           } else {
-             // Upstroke: force upward angle
-             by = -14;
-             if (player.isPlayer2) {
-               if (bx > -5) bx = -15;
-             } else {
-               if (bx < 5) bx = 15;
-             }
+            const hitAngle = Math.atan2(birdie.y - racketPos.y, birdie.x - racketPos.x);
+            let power = isSmash ? 32 : 22;
+
+            bx = Math.cos(hitAngle) * power + player.vx * 0.5;
+            by = Math.sin(hitAngle) * power;
+
+            if (isSmash) {
+               bx = player.isPlayer2 ? -28 : 28;
+               by = 16; // smash down hard
+               screenShake = 22;
+               spawnParticles(racketPos.x, racketPos.y, '#ffd166', 30, 8);
+               setAnnouncement("SMASH!");
+               setTimeout(() => { if (announcement === "SMASH!") setAnnouncement("") }, 1000);
+            } else {
+               by = -14;
+               if (player.isPlayer2) {
+                 if (bx > -5) bx = -15;
+               } else {
+                 if (bx < 5) bx = 15;
+               }
+            }
+            spawnParticles(racketPos.x, racketPos.y, '#fff', 10, 5);
           }
 
           birdie.vx = bx;
           birdie.vy = by;
-          
-          spawnParticles(racketPos.x, racketPos.y, '#fff', 10, 5);
 
-          // prevent multiple hits in one swing
-          player.swingTimer = 5; 
+          player.swingTimer = 5; // prevent multi hits
         }
       }
     }

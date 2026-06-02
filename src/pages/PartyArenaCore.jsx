@@ -4,18 +4,20 @@ import BackButton from './BackButton';
 import './Multiplayer3D.css';
 
 const PLAYER_COLORS = [0x34d399, 0x60a5fa, 0xf472b6, 0xf59e0b];
+const PLAYER_COLORS_HEX = ['#34d399', '#60a5fa', '#f472b6', '#f59e0b'];
 const PLAYER_LABELS = ['P1', 'P2', 'P3', 'P4'];
+
 const CONTROL_SETS = [
-  { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', action: 'KeyQ', label: 'P1 WASD + Q' },
-  { up: 'KeyI', down: 'KeyK', left: 'KeyJ', right: 'KeyL', action: 'KeyU', label: 'P2 IJKL + U' },
-  { up: 'KeyT', down: 'KeyG', left: 'KeyF', right: 'KeyH', action: 'KeyR', label: 'P3 TFGH + R' },
+  { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', action: 'KeyQ', label: 'P1 WASD + Q [ABILITY]' },
+  { up: 'KeyI', down: 'KeyK', left: 'KeyJ', right: 'KeyL', action: 'KeyU', label: 'P2 IJKL + U [ABILITY]' },
+  { up: 'KeyT', down: 'KeyG', left: 'KeyF', right: 'KeyH', action: 'KeyR', label: 'P3 TFGH + R [ABILITY]' },
   {
     up: 'ArrowUp',
     down: 'ArrowDown',
     left: 'ArrowLeft',
     right: 'ArrowRight',
     action: 'Slash',
-    label: 'P4 Arrows + /',
+    label: 'P4 Arrows + / [ABILITY]',
   },
 ];
 
@@ -50,28 +52,132 @@ function circlePoint(radius, angle) {
   return new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
 }
 
-function createPlayerMesh(color) {
+// DYNAMIC CUSTOM 3D PLAYER MESHES BASED ON GAME VARIANT
+function createPlayerMesh(color, variant) {
   const group = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.68, 1.25, 5, 10),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.38, metalness: 0.15 })
-  );
-  body.castShadow = true;
-  body.position.y = 1.2;
-  const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.8, 0.92, 0.3, 16),
-    new THREE.MeshStandardMaterial({ color: 0x121212, roughness: 0.8 })
-  );
-  base.position.y = 0.15;
-  base.receiveShadow = true;
-  group.add(body, base);
+
+  if (variant === 'dash') {
+    // Futuristic speed racer ship (sharp wedge shape with carbon wings)
+    const body = new THREE.Mesh(
+      new THREE.ConeGeometry(0.5, 1.35, 4),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.1, metalness: 0.8 })
+    );
+    body.rotation.x = Math.PI / 2;
+    body.rotation.y = Math.PI / 4;
+    body.position.y = 0.5;
+    body.castShadow = true;
+
+    const wings = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 0.15, 0.55),
+      new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9 })
+    );
+    wings.position.set(0, 0.35, 0.25);
+    wings.castShadow = true;
+
+    const glowThruster = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.18, 0.2, 8),
+      new THREE.MeshBasicMaterial({ color })
+    );
+    glowThruster.rotation.x = Math.PI / 2;
+    glowThruster.position.set(0, 0.4, -0.65);
+
+    group.add(body, wings, glowThruster);
+  } 
+  else if (variant === 'collect') {
+    // Floating sphere drone with rotating neon blades
+    const body = new THREE.Mesh(
+      new THREE.SphereGeometry(0.52, 16, 16),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.2, metalness: 0.6 })
+    );
+    body.position.y = 0.85;
+    body.castShadow = true;
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.72, 0.08, 6, 24),
+      new THREE.MeshStandardMaterial({ color: 0x151515, emissive: color, emissiveIntensity: 0.5 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.85;
+    ring.castShadow = true;
+
+    group.add(body, ring);
+  } 
+  else if (variant === 'tag') {
+    // Cyber ninja agent (capsule with dynamic neon visor)
+    const body = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.55, 1.0, 4, 8),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.2 })
+    );
+    body.position.y = 0.95;
+    body.castShadow = true;
+
+    const visor = new THREE.Mesh(
+      new THREE.BoxGeometry(0.72, 0.16, 0.62),
+      new THREE.MeshBasicMaterial({ color: 0x00ffd4 })
+    );
+    visor.position.set(0, 1.28, 0.25);
+
+    group.add(body, visor);
+  } 
+  else if (variant === 'zone') {
+    // Hover craft (flat plate chassis with glowing exhaust plates)
+    const plate = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.8, 0.9, 0.22, 6),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.7 })
+    );
+    plate.position.y = 0.4;
+    plate.castShadow = true;
+
+    const enginePod = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.3, 0.5),
+      new THREE.MeshStandardMaterial({ color: 0x111111 })
+    );
+    enginePod.position.set(0, 0.5, -0.45);
+    
+    group.add(plate, enginePod);
+  } 
+  else if (variant === 'bomb') {
+    // bulky hazard-suit (double capsule chassis)
+    const body = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.62, 0.85, 6, 12),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.15 })
+    );
+    body.position.y = 0.9;
+    body.castShadow = true;
+
+    const mask = new THREE.Mesh(
+      new THREE.SphereGeometry(0.3, 10, 10),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.1, metalness: 0.95 })
+    );
+    mask.position.set(0, 1.18, 0.32);
+    group.add(body, mask);
+  } 
+  else {
+    // Heavy armored mech tank (boxy structure)
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(1.15, 0.75, 1.15),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.85 })
+    );
+    body.position.y = 0.55;
+    body.castShadow = true;
+
+    const turret = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.35, 0.75),
+      new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7 })
+    );
+    turret.position.set(0, 0.95, 0.15);
+    turret.castShadow = true;
+
+    group.add(body, turret);
+  }
+
   return group;
 }
 
 function makeOrb(color, radius = 0.5) {
   const mesh = new THREE.Mesh(
     new THREE.SphereGeometry(radius, 20, 20),
-    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.25, roughness: 0.25 })
+    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.35, roughness: 0.2 })
   );
   mesh.castShadow = true;
   return mesh;
@@ -97,6 +203,17 @@ export default function PartyArenaCore({ config }) {
   const [scores, setScores] = useState([0, 0, 0, 0]);
   const [timeLeft, setTimeLeft] = useState(merged.roundSeconds);
   const [statusText, setStatusText] = useState(merged.objective || 'Score the most points before time runs out.');
+
+  // Ability text readouts
+  const abilityLabel = useMemo(() => {
+    if (merged.variant === 'tag') return 'DASH (Speed Forward)';
+    if (merged.variant === 'zone') return 'PULSE SHOCKWAVE (Push Opponents)';
+    if (merged.variant === 'collect') return 'GRAVITY MAGNET (Pull Nearby Orbs)';
+    if (merged.variant === 'bomb') return 'DEFLECT SHIELD (Immunity)';
+    if (merged.variant === 'dash') return 'NITRO OVERDRIVE (Super Boost)';
+    if (merged.variant === 'meteor') return 'THRUSTER JUMP (Dodge Meteors)';
+    return 'DASH';
+  }, [merged.variant]);
 
   useEffect(() => {
     const onKeyDown = e => {
@@ -141,7 +258,7 @@ export default function PartyArenaCore({ config }) {
     const hazard = {
       mesh: new THREE.Mesh(
         new THREE.TorusGeometry(0.95, 0.32, 12, 22),
-        new THREE.MeshStandardMaterial({ color: 0xff5d73, emissive: 0xff1b44, emissiveIntensity: 0.3 })
+        new THREE.MeshStandardMaterial({ color: 0xff5d73, emissive: 0xff1b44, emissiveIntensity: 0.35 })
       ),
       radius: 1.2,
       drift: new THREE.Vector3((Math.random() - 0.5) * 5, 0, (Math.random() - 0.5) * 5),
@@ -161,10 +278,17 @@ export default function PartyArenaCore({ config }) {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(merged.palette.background);
-    scene.fog = new THREE.FogExp2(merged.palette.fog, 0.02);
+    scene.fog = new THREE.FogExp2(merged.palette.fog, 0.015);
 
-    const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 200);
-    camera.position.set(0, 38, 30);
+    // Dynamic Camera View depending on Variant
+    const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 250);
+    if (merged.variant === 'dash') {
+      camera.position.set(0, 32, 34); // Closer chase angle for racing
+    } else if (merged.variant === 'bomb') {
+      camera.position.set(0, 42, 22); // High bird's eye cage view for bomb
+    } else {
+      camera.position.set(0, 38, 30);
+    }
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -174,50 +298,160 @@ export default function PartyArenaCore({ config }) {
     mountRef.current.innerHTML = '';
     mountRef.current.appendChild(renderer.domElement);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-    const directional = new THREE.DirectionalLight(0xffffff, 1.15);
-    directional.position.set(24, 42, 18);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.45);
+    const directional = new THREE.DirectionalLight(0xffffff, 1.25);
+    directional.position.set(24, 45, 18);
     directional.castShadow = true;
     directional.shadow.mapSize.set(1024, 1024);
     directional.shadow.camera.near = 1;
     directional.shadow.camera.far = 140;
     scene.add(ambient, directional);
 
+    // DYNAMIC FLOOR DESIGNS
+    let floorMat;
+    if (merged.variant === 'meteor') {
+      // Meteor arena - cracked dark stone with glowing red undertones
+      floorMat = new THREE.MeshStandardMaterial({
+        color: 0x1d1326,
+        roughness: 0.9,
+        emissive: 0xaa2200,
+        emissiveIntensity: 0.15
+      });
+    } else if (merged.variant === 'zone') {
+      // Hollowed metallic ring grid for zone bump
+      floorMat = new THREE.MeshStandardMaterial({
+        color: 0x0a1f24,
+        roughness: 0.7,
+        metalness: 0.6
+      });
+    } else {
+      floorMat = new THREE.MeshStandardMaterial({
+        color: merged.palette.floor,
+        roughness: 0.8,
+        metalness: 0.1
+      });
+    }
+
     const floor = new THREE.Mesh(
       new THREE.CylinderGeometry(merged.arenaSize, merged.arenaSize, 1, 48),
-      new THREE.MeshStandardMaterial({ color: merged.palette.floor, roughness: 0.85 })
+      floorMat
     );
     floor.receiveShadow = true;
     scene.add(floor);
 
+    // Glowing Neon Boundary Fences
     const wall = new THREE.Mesh(
       new THREE.TorusGeometry(merged.arenaSize + 0.35, 1.3, 20, 64),
-      new THREE.MeshStandardMaterial({ color: merged.palette.wall, emissive: merged.palette.wall, emissiveIntensity: 0.18 })
+      new THREE.MeshStandardMaterial({ color: merged.palette.wall, emissive: merged.palette.wall, emissiveIntensity: 0.25 })
     );
     wall.rotation.x = Math.PI / 2;
     wall.position.y = 1.2;
     scene.add(wall);
 
+    // BUILD VARIANT SPECIFIC SCENERY / OBSTACLES
+    const activeObstacles = [];
+    if (merged.variant === 'tag') {
+      // Tag - Build 4 glowing towers to act as obstacles to weave around
+      const pillarGeo = new THREE.BoxGeometry(2.2, 7, 2.2);
+      const pillarMat = new THREE.MeshStandardMaterial({
+        color: merged.palette.wall,
+        emissive: merged.palette.wall,
+        emissiveIntensity: 0.3,
+        roughness: 0.2
+      });
+      const coords = [[10, 10], [-10, 10], [10, -10], [-10, -10]];
+      coords.forEach(([px, pz]) => {
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(px, 3.5, pz);
+        pillar.castShadow = true;
+        pillar.receiveShadow = true;
+        scene.add(pillar);
+        activeObstacles.push({
+          position: new THREE.Vector3(px, 0.5, pz),
+          radius: 1.6
+        });
+      });
+    } 
+    else if (merged.variant === 'collect') {
+      // Collect - Build a floating futuristic comet core portal in the center
+      const portalCore = new THREE.Mesh(
+        new THREE.TorusGeometry(2.5, 0.35, 16, 48),
+        new THREE.MeshStandardMaterial({ color: 0x78ffd6, emissive: 0x78ffd6, emissiveIntensity: 0.4 })
+      );
+      portalCore.rotation.y = Math.PI / 4;
+      portalCore.position.set(0, 4, 0);
+      scene.add(portalCore);
+      activeObstacles.push({ portal: portalCore, rotationSpeed: 1.2 });
+    }
+    else if (merged.variant === 'bomb') {
+      // Bomb - Central high voltage warning spire
+      const spire = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.9, 8, 12),
+        new THREE.MeshStandardMaterial({ color: 0xff3d00, emissive: 0xff3d00, emissiveIntensity: 0.4 })
+      );
+      spire.position.set(0, 4, 0);
+      scene.add(spire);
+      activeObstacles.push({
+        position: new THREE.Vector3(0, 0.5, 0),
+        radius: 1.2
+      });
+    }
+    else if (merged.variant === 'dash') {
+      // Dash - Draw glowing speed chevron plates on the floor
+      const chevrons = [];
+      const padPositions = [[14, 14], [-14, 14], [14, -14], [-14, -14]];
+      padPositions.forEach(([px, pz]) => {
+        const pad = new THREE.Mesh(
+          new THREE.BoxGeometry(3, 0.12, 3),
+          new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.6 })
+        );
+        pad.position.set(px, 0.56, pz);
+        scene.add(pad);
+        chevrons.push({
+          position: new THREE.Vector3(px, 0.56, pz),
+          radius: 2.2
+        });
+      });
+      engineRef.current_chevrons = chevrons;
+    }
+
     const players = [];
     const scoresRef = [0, 0, 0, 0];
     const startRadius = merged.arenaSize * 0.58;
     for (let i = 0; i < count; i += 1) {
-      const mesh = createPlayerMesh(PLAYER_COLORS[i]);
+      const mesh = createPlayerMesh(PLAYER_COLORS[i], merged.variant);
       mesh.position.copy(circlePoint(startRadius, (i / count) * Math.PI * 2));
-      mesh.position.y = 0;
+      mesh.position.y = 0.5;
       scene.add(mesh);
+
+      // Add dynamic glowing ring shield mesh around the player, hidden initially
+      const shieldMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(1.2, 16, 16),
+        new THREE.MeshBasicMaterial({ color: PLAYER_COLORS[i], transparent: true, opacity: 0.28, wireframe: true })
+      );
+      shieldMesh.visible = false;
+      mesh.add(shieldMesh);
+
       players.push({
         index: i,
         mesh,
+        shieldMesh,
         radius: 0.92,
         velocity: new THREE.Vector3(),
         alive: true,
+        
+        // Ability state values
+        actionCooldown: 0,
+        actionTime: 0,
+        yVelocity: 0, // for jump physics
+        
+        colorHex: PLAYER_COLORS_HEX[i],
       });
     }
 
     const zoneMesh = new THREE.Mesh(
       new THREE.RingGeometry((merged.zoneRadius || 5) - 0.4, merged.zoneRadius || 5, 40),
-      new THREE.MeshBasicMaterial({ color: merged.palette.accent, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({ color: merged.palette.accent, transparent: true, opacity: 0.65, side: THREE.DoubleSide })
     );
     zoneMesh.rotation.x = -Math.PI / 2;
     zoneMesh.position.set(0, 0.08, 0);
@@ -226,7 +460,7 @@ export default function PartyArenaCore({ config }) {
 
     const crownMesh = new THREE.Mesh(
       new THREE.ConeGeometry(0.7, 1.2, 7),
-      new THREE.MeshStandardMaterial({ color: 0xffe169, emissive: 0xffbd2e, emissiveIntensity: 0.25 })
+      new THREE.MeshStandardMaterial({ color: 0xffe169, emissive: 0xffbd2e, emissiveIntensity: 0.35 })
     );
     crownMesh.position.y = 2.8;
     crownMesh.visible = merged.variant === 'tag';
@@ -239,13 +473,15 @@ export default function PartyArenaCore({ config }) {
 
     const bombMesh = new THREE.Mesh(
       new THREE.SphereGeometry(0.75, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xff5d5d, emissive: 0xff0000, emissiveIntensity: 0.28 })
+      new THREE.MeshStandardMaterial({ color: 0xff5d5d, emissive: 0xff0000, emissiveIntensity: 0.35 })
     );
     bombMesh.visible = merged.variant === 'bomb';
     scene.add(bombMesh);
 
-    const meteorGeo = new THREE.IcosahedronGeometry(0.9, 1);
-    const meteorMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0x7c2d12, emissiveIntensity: 0.2 });
+    const meteorGeo = new THREE.IcosahedronGeometry(1.0, 1);
+    const meteorMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0x7c2d12, emissiveIntensity: 0.35 });
+
+    const activeEffects = [];
 
     const engine = {
       scene,
@@ -258,9 +494,11 @@ export default function PartyArenaCore({ config }) {
       crownMesh,
       checkpointMesh,
       bombMesh,
+      obstacles: activeObstacles,
       pickups: [],
       hazards: [],
       meteors: [],
+      activeEffects,
       meteorGeo,
       meteorMat,
       scoresRef,
@@ -308,12 +546,116 @@ export default function PartyArenaCore({ config }) {
     return engine;
   }
 
+  // TRIGGER SPECIAL ABILITY MECHANIC
+  function triggerSpecialAction(engine, player, idx) {
+    if (player.actionCooldown > 0) return;
+
+    if (merged.variant === 'tag') {
+      // 1. DASH - forward burst speed
+      player.actionTime = 0.25;
+      player.actionCooldown = 2.0; // 2 seconds cooldown
+      setStatusText(`${PLAYER_LABELS[idx]} activated super DASH!`);
+      spawnPulseEffect(engine, player.mesh.position, player.colorHex, 1.2);
+    } 
+    else if (merged.variant === 'zone') {
+      // 2. SHOCKWAVE PULSE - knocks back all players
+      player.actionCooldown = 3.2;
+      setStatusText(`${PLAYER_LABELS[idx]} fired EMP SHOCKWAVE!`);
+      spawnPulseEffect(engine, player.mesh.position, '#00f5d4', 6.2);
+
+      // Physical knockback calculations on rivals
+      engine.players.forEach(rival => {
+        if (!rival.alive || rival.index === idx) return;
+        const dx = rival.mesh.position.x - player.mesh.position.x;
+        const dz = rival.mesh.position.z - player.mesh.position.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < 6.8) {
+          const power = (6.8 - dist) * 3.5;
+          const pushX = (dx / (dist || 0.001)) * power;
+          const pushZ = (dz / (dist || 0.001)) * power;
+          rival.mesh.position.x += pushX;
+          rival.mesh.position.z += pushZ;
+        }
+      });
+    } 
+    else if (merged.variant === 'collect') {
+      // 3. GRAVITY MAGNET - pulls nearby orbs
+      player.actionTime = 1.8;
+      player.actionCooldown = 4.0;
+      setStatusText(`${PLAYER_LABELS[idx]} activated GRAVITY MAGNET!`);
+      spawnPulseEffect(engine, player.mesh.position, player.colorHex, 3.5);
+    } 
+    else if (merged.variant === 'bomb') {
+      // 4. DEFLECT SHIELD - temporary immunity
+      player.actionTime = 1.4;
+      player.actionCooldown = 3.6;
+      player.shieldMesh.visible = true;
+      setStatusText(`${PLAYER_LABELS[idx]} raised immunity DEFLECT SHIELD!`);
+    } 
+    else if (merged.variant === 'dash') {
+      // 5. NITRO OVERDRIVE - huge speed burst
+      player.actionTime = 1.0;
+      player.actionCooldown = 3.5;
+      setStatusText(`${PLAYER_LABELS[idx]} engaged NITRO OVERDRIVE!`);
+      spawnPulseEffect(engine, player.mesh.position, '#ff9f1c', 2.0);
+    } 
+    else if (merged.variant === 'meteor') {
+      // 6. THRUSTER JUMP - vertical jump into the air
+      if (player.mesh.position.y <= 0.55) {
+        player.yVelocity = 16.5;
+        player.actionCooldown = 1.2;
+        setStatusText(`${PLAYER_LABELS[idx]} fired vertical JUMP THRUSTERS!`);
+        spawnPulseEffect(engine, player.mesh.position, '#2196f3', 1.6);
+      }
+    }
+  }
+
+  // Visual shockwave ring mesh in 3D scene
+  function spawnPulseEffect(engine, position, color, maxRadius) {
+    const ringGeo = new THREE.RingGeometry(0.1, 0.3, 30);
+    const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.copy(position);
+    ring.position.y = 0.58;
+    engine.scene.add(ring);
+
+    engine.activeEffects.push({
+      mesh: ring,
+      radius: 0.1,
+      maxRadius,
+      color,
+      update: (dt) => {
+        ring.scale.addScalar(dt * (maxRadius * 3.8));
+        ringMat.opacity = Math.max(0, ringMat.opacity - dt * 2.6);
+        return ringMat.opacity <= 0.02;
+      }
+    });
+  }
+
   function movePlayers(engine, dt) {
     const boundary = merged.arenaSize - 1.2;
     for (let i = 0; i < playerCount; i += 1) {
       const player = engine.players[i];
       if (!player || !player.alive) continue;
       const ctl = CONTROL_SETS[i];
+
+      // Decrement Ability timers
+      if (player.actionCooldown > 0) player.actionCooldown -= dt;
+      if (player.actionTime > 0) {
+        player.actionTime -= dt;
+        if (player.actionTime <= 0) {
+          player.shieldMesh.visible = false; // Disable shield
+        }
+      }
+
+      // Check ability trigger
+      if (keyStateRef.current[ctl.action] && !consumedActionRef.current[ctl.action]) {
+        consumedActionRef.current[ctl.action] = true;
+        triggerSpecialAction(engine, player, i);
+      }
+
+      // Movement vectors
       let x = 0;
       let z = 0;
       if (keyStateRef.current[ctl.left]) x -= 1;
@@ -325,13 +667,43 @@ export default function PartyArenaCore({ config }) {
         x /= len;
         z /= len;
       }
-      const dashDown = keyStateRef.current[ctl.action] ? 1.42 : 1;
-      const speed = merged.baseSpeed * dashDown;
+
+      // Speed boosting abilities
+      let abilityMultiplier = 1.0;
+      if (merged.variant === 'tag' && player.actionTime > 0) {
+        abilityMultiplier = 2.4; // Tag Super Dash
+      } else if (merged.variant === 'dash' && player.actionTime > 0) {
+        abilityMultiplier = 2.0; // Nitro Overdrive
+      }
+
+      // Floor Speed Chevrons Check (Dash Variant Only)
+      let padBoost = 1.0;
+      if (merged.variant === 'dash' && engineRef.current_chevrons) {
+        engineRef.current_chevrons.forEach(pad => {
+          if (player.mesh.position.distanceTo(pad.position) < pad.radius) {
+            padBoost = 1.85; // Speed Pad boost
+          }
+        });
+      }
+
+      const speed = merged.baseSpeed * abilityMultiplier * padBoost;
       player.velocity.x = x * speed;
       player.velocity.z = z * speed;
+      
       player.mesh.position.x += player.velocity.x * dt;
       player.mesh.position.z += player.velocity.z * dt;
 
+      // Thruster Jump Physics (Y Position gravity simulation)
+      if (merged.variant === 'meteor' || player.yVelocity > 0 || player.mesh.position.y > 0.5) {
+        player.mesh.position.y += player.yVelocity * dt;
+        player.yVelocity -= 36 * dt; // Gravity
+        if (player.mesh.position.y <= 0.5) {
+          player.mesh.position.y = 0.5;
+          player.yVelocity = 0;
+        }
+      }
+
+      // Arena boundary limits
       const dist = Math.hypot(player.mesh.position.x, player.mesh.position.z);
       if (dist > boundary) {
         const scale = boundary / Math.max(0.001, dist);
@@ -339,8 +711,25 @@ export default function PartyArenaCore({ config }) {
         player.mesh.position.z *= scale;
       }
 
+      // Rotate model towards heading
       if (len > 0) {
         player.mesh.rotation.y = Math.atan2(player.velocity.x, player.velocity.z);
+      }
+
+      // Scenery Collisions (Tag corner towers)
+      if (engine.obstacles && engine.obstacles.length > 0) {
+        engine.obstacles.forEach(obs => {
+          if (!obs.position) return;
+          const dx = player.mesh.position.x - obs.position.x;
+          const dz = player.mesh.position.z - obs.position.z;
+          const d = Math.hypot(dx, dz);
+          const minD = player.radius + obs.radius;
+          if (d < minD) {
+            const overlap = minD - d;
+            player.mesh.position.x += (dx / (d || 0.001)) * overlap;
+            player.mesh.position.z += (dz / (d || 0.001)) * overlap;
+          }
+        });
       }
     }
   }
@@ -366,17 +755,26 @@ export default function PartyArenaCore({ config }) {
           b.mesh.position.x += nx * overlap;
           b.mesh.position.z += nz * overlap;
 
-          if (merged.variant === 'tag' && engine.crownHolder === a.index) {
-            engine.crownHolder = b.index;
-            setStatusText(`${PLAYER_LABELS[b.index]} stole the crown.`);
-          } else if (merged.variant === 'tag' && engine.crownHolder === b.index) {
-            engine.crownHolder = a.index;
-            setStatusText(`${PLAYER_LABELS[a.index]} stole the crown.`);
+          // TAG - Steal the crown, unless immune by abilities
+          if (merged.variant === 'tag') {
+            if (engine.crownHolder === a.index) {
+              engine.crownHolder = b.index;
+              setStatusText(`${PLAYER_LABELS[b.index]} stole the crown.`);
+            } else if (engine.crownHolder === b.index) {
+              engine.crownHolder = a.index;
+              setStatusText(`${PLAYER_LABELS[a.index]} stole the crown.`);
+            }
           }
-          if (merged.variant === 'bomb' && engine.bombHolder === a.index) {
-            engine.bombHolder = b.index;
-          } else if (merged.variant === 'bomb' && engine.bombHolder === b.index) {
-            engine.bombHolder = a.index;
+
+          // BOMB - Pass the bomb, unless immune by Deflect Shield
+          if (merged.variant === 'bomb') {
+            if (engine.bombHolder === a.index && b.actionTime <= 0) {
+              engine.bombHolder = b.index;
+              setStatusText(`BOMB passed to ${PLAYER_LABELS[b.index]}!`);
+            } else if (engine.bombHolder === b.index && a.actionTime <= 0) {
+              engine.bombHolder = a.index;
+              setStatusText(`BOMB passed to ${PLAYER_LABELS[a.index]}!`);
+            }
           }
         }
       }
@@ -388,6 +786,22 @@ export default function PartyArenaCore({ config }) {
       const pickup = engine.pickups[i];
       pickup.mesh.rotation.y += pickup.spin * dt;
       pickup.mesh.position.y = 0.9 + Math.sin(engine.elapsed * 2.8 + i) * 0.15;
+      
+      // Pull towards player if GRAVITY MAGNET is engaged
+      for (let p = 0; p < playerCount; p += 1) {
+        const player = engine.players[p];
+        if (!player?.alive) continue;
+
+        if (merged.variant === 'collect' && player.actionTime > 0) {
+          const distToMagnet = player.mesh.position.distanceTo(pickup.mesh.position);
+          if (distToMagnet < 12.0) {
+            const pullDir = new THREE.Vector3().subVectors(player.mesh.position, pickup.mesh.position).normalize();
+            pickup.mesh.position.addScaledVector(pullDir, dt * 14);
+          }
+        }
+      }
+
+      // Check pickup grab collision
       for (let p = 0; p < playerCount; p += 1) {
         const player = engine.players[p];
         if (!player?.alive) continue;
@@ -396,7 +810,7 @@ export default function PartyArenaCore({ config }) {
           engine.scene.remove(pickup.mesh);
           engine.pickups.splice(i, 1);
           engine.scoresRef[p] += merged.collectPoints || 4;
-          setStatusText(`${PLAYER_LABELS[p]} captured an orb.`);
+          setStatusText(`${PLAYER_LABELS[p]} gathered an orb.`);
           spawnPickups(engine, 1);
           break;
         }
@@ -453,6 +867,10 @@ export default function PartyArenaCore({ config }) {
     engine.crownMesh.position.set(holder.mesh.position.x, 3.05, holder.mesh.position.z);
     engine.crownMesh.rotation.y += dt * 2.4;
     engine.scoresRef[engine.crownHolder] += (merged.tagRate || 4) * dt;
+
+    // ACTIVE CAMERA FOCUS (Tag variant tracks the crown carrier organically)
+    engine.camera.position.x += (holder.mesh.position.x - engine.camera.position.x) * 0.06;
+    engine.camera.lookAt(holder.mesh.position);
   }
 
   function updateDash(engine, dt) {
@@ -489,8 +907,17 @@ export default function PartyArenaCore({ config }) {
       const idx = engine.bombHolder;
       engine.scoresRef[idx] = Math.max(0, engine.scoresRef[idx] - (merged.bombPenalty || 16));
       engine.bombTimer = 4.8;
-      engine.bombHolder = Math.floor(Math.random() * playerCount);
-      setStatusText(`${PLAYER_LABELS[idx]} got bombed.`);
+      
+      // Pass the bomb randomly, avoiding shielded immune players
+      const validTargets = engine.players.slice(0, playerCount).filter(p => p.alive && p.actionTime <= 0);
+      if (validTargets.length > 0) {
+        engine.bombHolder = validTargets[Math.floor(Math.random() * validTargets.length)].index;
+      } else {
+        engine.bombHolder = Math.floor(Math.random() * playerCount);
+      }
+      
+      setStatusText(`${PLAYER_LABELS[idx]} got bombed!`);
+      spawnPulseEffect(engine, holder.mesh.position, '#ff1b44', 3.8);
     }
   }
 
@@ -522,11 +949,16 @@ export default function PartyArenaCore({ config }) {
       for (let p = 0; p < playerCount; p += 1) {
         const player = engine.players[p];
         if (!player?.alive) continue;
+        
+        // Skip check if player is jumping high in the air
+        if (player.mesh.position.y > 2.0) continue;
+
         const d = player.mesh.position.distanceTo(meteor.mesh.position);
         if (d < 1.6) {
           player.alive = false;
           player.mesh.visible = false;
           setStatusText(`${PLAYER_LABELS[p]} was hit by a meteor.`);
+          spawnPulseEffect(engine, player.mesh.position, '#ff5252', 2.0);
         }
       }
 
@@ -597,6 +1029,26 @@ export default function PartyArenaCore({ config }) {
     engine.lastTime = timestamp;
     engine.elapsed += dt;
 
+    // Scenic rotation adjustments (comet portal rotation)
+    if (engine.obstacles) {
+      engine.obstacles.forEach(obs => {
+        if (obs.portal) {
+          obs.portal.rotation.z += dt * obs.rotationSpeed;
+          obs.portal.rotation.y += dt * 0.2;
+        }
+      });
+    }
+
+    // Update floating neon abilities (Visual effects)
+    for (let i = engine.activeEffects.length - 1; i >= 0; i -= 1) {
+      const fx = engine.activeEffects[i];
+      const finished = fx.update(dt);
+      if (finished) {
+        engine.scene.remove(fx.mesh);
+        engine.activeEffects.splice(i, 1);
+      }
+    }
+
     movePlayers(engine, dt);
     resolveBumps(engine);
     updateVariant(engine, dt);
@@ -651,50 +1103,87 @@ export default function PartyArenaCore({ config }) {
   }
 
   return (
-    <div className="m3-root">
+    <div className="m3-root font-mono">
       <div className="m3-canvas-wrap" ref={mountRef} />
 
       {phase === 'menu' && (
-        <div className="m3-overlay">
-          <h1>{merged.title}</h1>
-          <p>{merged.subtitle}</p>
-          <p>{merged.objective}</p>
-          <div className="m3-player-count">
-            <span>Players:</span>
-            <button className={playerCount === 3 ? 'active' : ''} onClick={() => setPlayerCount(3)}>3</button>
-            <button className={playerCount === 4 ? 'active' : ''} onClick={() => setPlayerCount(4)}>4</button>
+        <div className="m3-overlay bg-[#07070f]/90 border border-cyan-500/20 backdrop-blur-md rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.15)]">
+          <span className="text-[10px] text-cyan-400 tracking-[0.4em]">// DYNAMIC_ARCADE_PROTOCOL</span>
+          <h1 className="text-3xl md:text-5xl font-black uppercase text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 mt-2 mb-2">{merged.title}</h1>
+          <p className="text-xs text-gray-400 tracking-wider mb-2">{merged.subtitle}</p>
+          <div className="bg-white/5 border border-white/10 p-3 rounded-lg text-sm text-cyan-300 italic mb-4 max-w-lg">
+            Objective: {merged.objective}
           </div>
-          <div className="m3-controls-list">
-            {CONTROL_SETS.slice(0, playerCount).map(control => (
-              <span key={control.label}>{control.label}</span>
-            ))}
+          
+          <div className="m3-player-count mb-4">
+            <span className="text-xs text-gray-400 mr-4">PLAYER CONFIG:</span>
+            <button className={`px-4 py-1.5 rounded-l border border-cyan-500/20 ${playerCount === 3 ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50' : 'bg-transparent text-gray-400 hover:bg-white/5'}`} onClick={() => setPlayerCount(3)}>3P</button>
+            <button className={`px-4 py-1.5 rounded-r border-t border-b border-r border-cyan-500/20 ${playerCount === 4 ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50' : 'bg-transparent text-gray-400 hover:bg-white/5'}`} onClick={() => setPlayerCount(4)}>4P</button>
           </div>
-          <button className="m3-main-btn" onClick={startRound}>Start Match</button>
+
+          <div className="bg-black/30 border border-white/5 p-4 rounded-xl mb-6 text-left max-w-md w-full">
+            <h4 className="text-[10px] text-purple-400 tracking-widest uppercase mb-2">// TELEMETRY_CONTROLS</h4>
+            <div className="grid grid-cols-1 gap-1 text-[11px] text-gray-300">
+              {CONTROL_SETS.slice(0, playerCount).map(control => (
+                <div key={control.label} className="flex justify-between border-b border-white/5 pb-1">
+                  <span>{control.label.split(' [')[0]}</span>
+                  <span className="text-cyan-400">{control.label.includes('[') ? `[${control.label.split('[')[1]}` : ''}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-cyan-400/70 text-center font-bold uppercase mt-3 tracking-wider">
+              Special Ability: {abilityLabel}
+            </p>
+          </div>
+
+          <button className="relative group px-8 py-3 text-cyan-400 hover:text-white uppercase transition-colors duration-300 tracking-widest font-black" onClick={startRound}>
+            <span className="relative z-10">INITIALIZE MATCH</span>
+            <span className="absolute inset-0 border border-cyan-500 group-hover:border-cyan-400 rounded bg-cyan-950/20 group-hover:bg-cyan-950/40 transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]" />
+          </button>
         </div>
       )}
 
       {phase === 'playing' && (
-        <div className="m3-hud">
-          <div className="m3-time">Time: {Math.ceil(timeLeft)}</div>
+        <div className="m3-hud pointer-events-none">
+          <div className="m3-time bg-black/60 border border-cyan-500/20 text-cyan-400 px-4 py-2 rounded-xl backdrop-blur-sm shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+            SYSTEM_TIME: {Math.ceil(timeLeft)}s
+          </div>
           <div className="m3-score-row">
             {scores.slice(0, playerCount).map((value, index) => (
-              <div key={PLAYER_LABELS[index]} className="m3-score-card">
-                <span>{PLAYER_LABELS[index]}</span>
-                <strong>{Math.round(value)}</strong>
+              <div key={PLAYER_LABELS[index]} className="m3-score-card bg-black/60 border border-cyan-500/10 rounded-xl px-4 py-2 backdrop-blur-sm text-center">
+                <span style={{ color: PLAYER_COLORS_HEX[index] }} className="font-bold text-[10px] block uppercase">
+                  {PLAYER_LABELS[index]}
+                </span>
+                <strong className="text-lg text-white font-black">{Math.round(value)}</strong>
               </div>
             ))}
           </div>
-          <div className="m3-status">{statusText}</div>
-          <button className="m3-mini-btn" onClick={resetToMenu}>Menu</button>
+          <div className="m3-status bg-purple-950/40 border border-purple-500/20 text-purple-300 text-xs px-6 py-2.5 rounded-full backdrop-blur-sm uppercase tracking-wider animate-pulse max-w-md text-center">
+            // {statusText}
+          </div>
+          <button className="m3-mini-btn pointer-events-auto bg-black/60 border border-white/10 hover:border-white/40 text-gray-400 hover:text-white text-xs px-4 py-2 rounded-xl transition-all" onClick={resetToMenu}>
+            ABORT
+          </button>
         </div>
       )}
 
       {phase === 'over' && (
-        <div className="m3-overlay">
-          <h2>Round Over</h2>
-          <p>{statusText}</p>
-          <button className="m3-main-btn" onClick={startRound}>Play Again</button>
-          <button className="m3-alt-btn" onClick={resetToMenu}>Main Menu</button>
+        <div className="m3-overlay bg-[#07070f]/90 border border-red-500/20 backdrop-blur-md rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.1)]">
+          <span className="text-[10px] text-red-500 tracking-[0.4em]">// ROUND_TERMINATED</span>
+          <h2 className="text-3xl font-black uppercase text-white mt-2 mb-4">MATCH COMPLETE</h2>
+          <div className="bg-black/40 border border-white/5 p-4 rounded-xl mb-6 text-sm text-cyan-300 uppercase tracking-wide">
+            {statusText}
+          </div>
+          <div className="flex gap-4">
+            <button className="relative group px-6 py-2.5 text-cyan-400 hover:text-white uppercase transition-colors tracking-widest text-xs font-bold" onClick={startRound}>
+              <span className="relative z-10">RE-ENGAGE</span>
+              <span className="absolute inset-0 border border-cyan-500 group-hover:border-cyan-400 rounded bg-cyan-950/20 transition-all duration-300" />
+            </button>
+            <button className="relative group px-6 py-2.5 text-gray-400 hover:text-white uppercase transition-colors tracking-widest text-xs font-bold" onClick={resetToMenu}>
+              <span className="relative z-10">TERMINATE</span>
+              <span className="absolute inset-0 border border-white/10 group-hover:border-white/30 rounded bg-white/5 transition-all duration-300" />
+            </button>
+          </div>
         </div>
       )}
 

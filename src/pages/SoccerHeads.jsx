@@ -12,9 +12,24 @@ export default function SoccerHeads() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let animationId;
+    let gameOver = false;
+    let scoreP1 = 0;
+    let scoreP2 = 0;
 
     const keys = {};
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
+    window.addEventListener('keydown', (e) => {
+      if (gameOver) {
+        if (e.code === 'KeyR' || e.code === 'Space' || e.code === 'Enter') {
+          gameOver = false;
+          scoreP1 = 0;
+          scoreP2 = 0;
+          setScore({ p1: 0, p2: 0 });
+          resetPositions();
+        }
+        return;
+      }
+      keys[e.code] = true;
+    });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
     // Physics constants
@@ -397,8 +412,8 @@ export default function SoccerHeads() {
     const p2 = new Player(canvas.width - 200, '#2196f3', true);
     const ball = new Ball();
     
-    let scoreP1 = 0;
-    let scoreP2 = 0;
+    scoreP1 = 0;
+    scoreP2 = 0;
     let powerUp = null;
     let powerUpTimer = 0;
     let goalCelebration = 0;
@@ -459,9 +474,18 @@ export default function SoccerHeads() {
     }
 
     function checkGoal() {
+      if (gameOver) return;
+
       if (goalCelebration > 0) {
         goalCelebration--;
-        if (goalCelebration === 0) resetPositions();
+        if (goalCelebration === 0) {
+          if (scoreP1 >= 5 || scoreP2 >= 5) {
+            gameOver = true;
+            setAnnouncement(scoreP1 >= 5 ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!");
+          } else {
+            resetPositions();
+          }
+        }
         return;
       }
 
@@ -576,7 +600,7 @@ export default function SoccerHeads() {
       drawGoal(ctx, 0, groundY - goalH, goalW, goalH, true);
       drawGoal(ctx, canvas.width - goalW, groundY - goalH, goalW, goalH, false);
 
-      if (goalCelebration === 0) {
+      if (goalCelebration === 0 && !gameOver) {
         p1.update();
         p2.update();
         ball.update();
@@ -611,6 +635,9 @@ export default function SoccerHeads() {
             }
           });
         }
+      } else {
+        // Run goal check decrement logic even during goal celebration freezes
+        checkGoal();
       }
 
       if (powerUp && powerUp.active) powerUp.draw(ctx);
@@ -634,6 +661,21 @@ export default function SoccerHeads() {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(`${scoreP1} - ${scoreP2}`, canvas.width/2, 40);
+
+      // Game Over Overlay
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#ffd740';
+        ctx.font = 'bold 54px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText(scoreP1 >= 5 ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!", canvas.width / 2, canvas.height / 2 - 55);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '22px Inter';
+        ctx.fillText("PRESS 'R' OR SPACE TO PLAY AGAIN", canvas.width / 2, canvas.height / 2 + 25);
+      }
 
       ctx.restore();
 

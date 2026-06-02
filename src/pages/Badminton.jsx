@@ -269,19 +269,28 @@ export default function Badminton() {
       reset(server) {
         this.vx = 0;
         this.vy = 0;
-        if (server === 1) {
-          this.x = 200;
-          this.y = 200;
-        } else {
-          this.x = 800;
-          this.y = 200;
-        }
+        this.server = server;
+        this.isServed = false;
         this.active = true;
-        this.rotation = 0;
+        this.rotation = server === 1 ? 0 : Math.PI;
       }
 
       update() {
         if (!this.active) return;
+        
+        if (!this.isServed) {
+          // Shuttlecock is held by the server's hand prior to serve
+          if (this.server === 1) {
+            this.x = p1.x + 25;
+            this.y = p1.y - 100;
+            this.rotation = -Math.PI / 6; // tilted in hand
+          } else {
+            this.x = p2.x - 25;
+            this.y = p2.y - 100;
+            this.rotation = Math.PI + Math.PI / 6;
+          }
+          return;
+        }
         
         // Gravity
         this.vy += GRAVITY * 0.6; 
@@ -379,6 +388,10 @@ export default function Badminton() {
 
     function checkRacketCollision(player, birdie) {
       if (player.swinging && birdie.active) {
+        // If the birdie is not served, only the server can strike it
+        if (!birdie.isServed && birdie.server === 1 && player.isPlayer2) return;
+        if (!birdie.isServed && birdie.server === 2 && !player.isPlayer2) return;
+
         const racketPos = player.getRacketWorldPos();
         
         const dist = Math.hypot(birdie.x - racketPos.x, birdie.y - racketPos.y);
@@ -386,6 +399,7 @@ export default function Badminton() {
         // A wider hit box for gameplay fun
         if (dist < 60 && player.swingTimer > 10 && player.swingTimer < 18) { 
           // Hit!
+          birdie.isServed = true;
           const hitAngle = Math.atan2(birdie.y - racketPos.y, birdie.x - racketPos.x);
           
           let power = 22;

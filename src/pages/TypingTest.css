@@ -1,0 +1,28 @@
+.tt-root{display:flex;flex-direction:column;align-items:center;min-height:100vh;background:#0a0e1a;color:#eee;font-family:'Segoe UI',sans-serif;padding:30px 16px;gap:20px}
+.tt-root h1{font-size:2.2rem;color:#00e5ff;text-shadow:0 0 14px #00e5ff55;margin:0}
+.tt-start-box{display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:60px}
+.tt-start-box p{font-size:1.2rem;color:#888}
+.tt-dur-btns{display:flex;gap:8px}
+.tt-dur-btns button{padding:8px 20px;border:1px solid #334;border-radius:8px;background:#161b2e;color:#aaa;font-size:1rem;cursor:pointer;transition:all .15s}
+.tt-dur-btns button.active{background:#00e5ff;color:#000;border-color:#00e5ff;font-weight:700}
+.tt-start-btn{padding:14px 40px;background:#00e5ff;border:none;border-radius:10px;color:#000;font-weight:700;font-size:1.1rem;cursor:pointer;transition:all .15s}
+.tt-start-btn:hover{background:#18ffff;transform:translateY(-2px)}
+.tt-game{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:700px}
+.tt-hud{display:flex;gap:24px;font-size:1rem;color:#888}
+.tt-hud strong{color:#ffd740}
+.tt-timer{color:#ff5252;font-weight:700;font-size:1.3rem}
+.tt-text{background:#131830;padding:20px;border-radius:10px;font-size:1.2rem;line-height:1.8;font-family:monospace;border:1px solid #1a2a44;max-width:700px;width:100%}
+.tt-char{transition:color .1s}
+.tt-char.correct{color:#69f0ae}
+.tt-char.wrong{color:#ff5252;background:#ff525222;text-decoration:underline}
+.tt-char.cursor{border-left:2px solid #00e5ff;animation:cursorBlink 1s step-end infinite}
+@keyframes cursorBlink{50%{border-color:transparent}}
+.tt-input{width:100%;max-width:700px;height:60px;background:#0d1225;border:1px solid #1a2a44;border-radius:8px;color:#eee;font-size:1.1rem;font-family:monospace;padding:12px;resize:none;outline:none}
+.tt-input:focus{border-color:#00e5ff}
+.tt-results{text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px}
+.tt-results h2{color:#ffd740;font-size:1.8rem;margin:0}
+.tt-res-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.tt-res-item{display:flex;flex-direction:column;align-items:center;padding:16px 20px;background:#131830;border-radius:10px;border:1px solid #1a2a44}
+.tt-res-val{font-size:2rem;font-weight:700;color:#00e5ff}
+.tt-res-item span:last-child{font-size:.85rem;color:#888}
+@media(max-width:500px){.tt-res-grid{grid-template-columns:repeat(2,1fr)}}

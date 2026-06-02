@@ -1,0 +1,123 @@
+/* ===== Stickman Fighter - Enhanced CSS ===== */
+.sf-root { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #0a0e1a; }
+.sf-canvas { display: block; width: 100%; height: 100%; }
+
+/* ===== Menu Overlay ===== */
+.sf-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(0,229,255,0.06), rgba(0,0,0,0.85));
+  z-index: 2;
+}
+.sf-overlay h1 {
+  font-size: 3.2rem; color: #00e5ff;
+  text-shadow: 0 0 30px rgba(0,229,255,0.7), 0 0 60px rgba(0,229,255,0.3);
+  margin-bottom: 0.3rem; letter-spacing: 2px;
+}
+.sf-subtitle { color: #aab; font-size: 1rem; margin-bottom: 1rem; letter-spacing: 1px; }
+.sf-overlay p { color: #dde; font-size: 1.2rem; margin: .3rem; }
+.sf-keys {
+  background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.3);
+  border-radius: 12px; padding: 1rem 2rem; margin: 0.8rem 0;
+  backdrop-filter: blur(4px);
+}
+.sf-keys p { color: #8df; font-size: 0.95rem; margin: 0.3rem 0; }
+.sf-keys b { color: #00e5ff; }
+.sf-start-hint { color: #ffd740 !important; font-size: 1.3rem !important; margin-top: 1rem !important; animation: sfBreathe 2s ease-in-out infinite; }
+.sf-best-display { color: #69f0ae !important; font-size: 1rem !important; margin-top: 0.5rem !important; }
+
+@keyframes sfBreathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+/* ===== HUD ===== */
+.sf-hud {
+  position: absolute; top: 12px; left: 12px; right: 12px;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  z-index: 2; pointer-events: none; gap: 12px;
+}
+.sf-hud-left, .sf-hud-right { flex: 1; max-width: 320px; }
+.sf-hud-right { text-align: right; }
+.sf-label {
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; display: block; margin-bottom: 2px;
+}
+.cyan-text { color: #00e5ff; }
+.red-text { color: #ff5252; }
+.gold-text { color: #ffd740; }
+
+.sf-bar-wrap { width: 100%; margin-bottom: 4px; }
+.sf-bar {
+  width: 100%; height: 16px; background: rgba(30,30,40,0.85);
+  border-radius: 8px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+.sf-fill { height: 100%; transition: width .2s ease-out; border-radius: 8px; }
+.sf-fill.cyan { background: linear-gradient(90deg, #00e5ff, #00b0d0); box-shadow: 0 0 8px rgba(0,229,255,0.4); }
+.sf-fill.red { background: linear-gradient(90deg, #ff5252, #c62828); box-shadow: 0 0 8px rgba(255,82,82,0.4); }
+.sf-fill.boss { background: linear-gradient(90deg, #e040fb, #9c27b0); box-shadow: 0 0 10px rgba(224,64,251,0.5); }
+.boss-bar { border-color: rgba(224,64,251,0.3); }
+
+/* Special Meter */
+.sf-meter-wrap { display: flex; align-items: center; gap: 6px; }
+.sf-meter-bar {
+  flex: 1; height: 8px; background: rgba(30,30,40,0.8);
+  border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,215,64,0.15);
+}
+.sf-meter-fill {
+  height: 100%; background: linear-gradient(90deg, #ff8800, #ffd740);
+  border-radius: 4px; transition: width .15s;
+  box-shadow: 0 0 6px rgba(255,215,64,0.4);
+}
+.sf-ready-flash {
+  color: #ffd740; font-size: 0.7rem; font-weight: 700;
+  animation: sfPulse 0.4s ease-in-out infinite alternate;
+  text-shadow: 0 0 8px rgba(255,215,64,0.6);
+}
+
+/* Center Info Panel */
+.sf-info { text-align: center; min-width: 160px; }
+.sf-score-display { color: #ffd740; font-size: 1.1rem; font-weight: 700; }
+.sf-wave-display { color: #dde; font-size: 0.9rem; font-weight: 600; margin: 2px 0; }
+.sf-boss-tag {
+  color: #e040fb; font-size: 0.75rem; font-weight: 700;
+  padding: 1px 8px; border-radius: 8px;
+  border: 1px solid #e040fb;
+  animation: sfPulse 0.5s ease-in-out infinite alternate;
+  margin-left: 4px;
+}
+.sf-arena-name { color: #8af; font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; }
+.sf-combo-hud { color: #ffd740; font-size: 1.4rem; font-weight: 700; animation: sfPulse .3s ease-in-out infinite alternate; }
+.sf-rank { color: #ff5252; font-size: 1.6rem; margin-left: 4px; }
+.sf-powerup-hud {
+  display: inline-block; color: #69f0ae; font-size: 0.75rem; font-weight: 700;
+  padding: 2px 10px; border-radius: 10px;
+  background: rgba(105,240,174,0.1); border: 1px solid rgba(105,240,174,0.3);
+  margin-top: 4px;
+}
+
+@keyframes sfPulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+
+/* ===== Game Over ===== */
+.sf-gameover {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(255,50,50,0.08), rgba(0,0,0,0.9));
+  z-index: 3;
+}
+.sf-gameover h2 {
+  font-size: 3.2rem; color: #ff5252;
+  text-shadow: 0 0 30px rgba(255,82,82,0.7), 0 0 60px rgba(255,82,82,0.3);
+  margin-bottom: 0.8rem;
+}
+.sf-gameover p { color: #dde; font-size: 1.3rem; margin: .3rem; }
+.sf-go-score { color: #ffd740 !important; font-size: 1.8rem !important; font-weight: 700; }
+.sf-go-best { color: #69f0ae !important; font-size: 1rem !important; }
+.sf-gameover button {
+  margin-top: 1.2rem; padding: .9rem 2.5rem; font-size: 1.2rem;
+  background: linear-gradient(135deg, #00e5ff, #00b0d0);
+  border: none; border-radius: 12px; color: #000; cursor: pointer;
+  font-weight: 700; letter-spacing: 1px;
+  box-shadow: 0 4px 18px rgba(0,229,255,0.3);
+  transition: all .2s;
+}
+.sf-gameover button:hover { transform: translateY(-2px) scale(1.03); filter: brightness(1.1); }

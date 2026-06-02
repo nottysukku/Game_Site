@@ -1,0 +1,11 @@
+.si-root{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#0a0e1a;color:#eee;font-family:'Segoe UI',sans-serif;gap:12px}
+.si-hud{display:flex;gap:30px;font-size:1.1rem;color:#ccc}
+.si-hud span:nth-child(1){color:#ffd740}
+.si-hud span:nth-child(3){color:#ff5252}
+.si-canvas{border:2px solid #69f0ae44;border-radius:6px;box-shadow:0 0 30px rgba(105,240,174,.08)}
+.si-over{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:20}
+.si-over h2{font-size:3rem;color:#ff5252;text-shadow:0 0 20px #ff5252;margin:0}
+.si-over p{font-size:1.3rem;color:#ccc}
+.si-over button{padding:12px 36px;font-size:1.1rem;background:#69f0ae;border:none;border-radius:8px;color:#000;font-weight:700;cursor:pointer;margin-top:8px}
+.si-over button:hover{background:#b9f6ca}
+.si-controls{font-size:.8rem;color:#555}

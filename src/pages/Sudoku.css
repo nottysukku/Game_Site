@@ -1,0 +1,61 @@
+.su-root {
+  text-align: center;
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+  color: #e0e0e0;
+}
+.su-root h1 { font-size: 2.2rem; margin-bottom: 10px; color: #90caf9; }
+.su-top { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 16px; flex-wrap: wrap; }
+.su-diffs { display: flex; gap: 8px; }
+.su-diffs button {
+  padding: 6px 18px; border-radius: 20px; border: 2px solid #456; background: transparent;
+  color: #90caf9; font-size: .95rem; cursor: pointer; transition: all .2s;
+}
+.su-diffs button.active, .su-diffs button:hover { background: #90caf9; color: #0d1b2a; }
+.su-timer { font-size: 1.1rem; color: #ffd54f; font-variant-numeric: tabular-nums; }
+
+.su-grid {
+  display: grid; grid-template-columns: repeat(9, 48px); grid-template-rows: repeat(9, 48px);
+  gap: 0; margin: 0 auto 16px; border: 3px solid #90caf9; width: fit-content; border-radius: 4px;
+}
+.su-cell {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; font-weight: 600; border: 1px solid #334;
+  cursor: pointer; transition: background .15s; user-select: none;
+  background: #1b263b;
+}
+.su-cell.br { border-right: 3px solid #90caf9; }
+.su-cell.bb { border-bottom: 3px solid #90caf9; }
+.su-cell.fixed { color: #bbdefb; }
+.su-cell:not(.fixed) { color: #69f0ae; }
+.su-cell.hl { background: #263850; }
+.su-cell.same { background: #37474f; }
+.su-cell.sel { background: #1a5276 !important; box-shadow: inset 0 0 0 2px #90caf9; }
+.su-cell.err { color: #ef5350 !important; background: rgba(239,83,80,.15) !important; }
+
+.su-numpad { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 10px auto; max-width: 440px; }
+.su-numpad button {
+  width: 44px; height: 44px; font-size: 1.3rem; border-radius: 8px;
+  border: none; background: #263850; color: #e0e0e0; cursor: pointer; transition: all .15s;
+}
+.su-numpad button:hover { background: #90caf9; color: #0d1b2a; transform: scale(1.1); }
+
+.su-win {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.7); z-index: 10;
+}
+.su-win h2 { font-size: 2.5rem; color: #69f0ae; margin-bottom: 8px; }
+.su-win p { font-size: 1.3rem; color: #ffd54f; margin-bottom: 16px; }
+.su-win button {
+  padding: 10px 30px; font-size: 1.1rem; border-radius: 8px; border: none;
+  background: #69f0ae; color: #0d1b2a; cursor: pointer; font-weight: 600;
+}
+
+@media (max-width: 500px) {
+  .su-grid { grid-template-columns: repeat(9, 36px); grid-template-rows: repeat(9, 36px); }
+  .su-cell { font-size: 1.1rem; }
+  .su-numpad button { width: 36px; height: 36px; font-size: 1.1rem; }
+}

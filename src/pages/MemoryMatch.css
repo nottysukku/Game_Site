@@ -1,0 +1,60 @@
+.mm-root {
+  text-align: center; padding: 20px; font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #e0e0e0;
+}
+.mm-root h1 { font-size: 2.2rem; margin-bottom: 10px; color: #f48fb1; }
+.mm-top { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 16px; }
+.mm-sizes { display: flex; gap: 8px; }
+.mm-sizes button {
+  padding: 6px 16px; border-radius: 20px; border: 2px solid #556; background: transparent;
+  color: #f48fb1; font-size: .9rem; cursor: pointer; transition: all .2s;
+}
+.mm-sizes button.active, .mm-sizes button:hover { background: #f48fb1; color: #1a1a2e; }
+.mm-stats { display: flex; gap: 20px; font-size: 1rem; }
+.mm-stats b { color: #ffd54f; }
+
+.mm-grid { display: grid; gap: 8px; justify-content: center; margin: 0 auto 16px; perspective: 800px; }
+
+.mm-card {
+  width: 72px; height: 72px; cursor: pointer; perspective: 600px;
+}
+.mm-inner {
+  position: relative; width: 100%; height: 100%; transition: transform .5s; transform-style: preserve-3d;
+}
+.mm-card.flip .mm-inner { transform: rotateY(180deg); }
+.mm-front, .mm-back {
+  position: absolute; width: 100%; height: 100%; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; backface-visibility: hidden;
+  font-size: 2rem;
+}
+.mm-front {
+  background: linear-gradient(135deg, #4a148c, #7b1fa2); color: #ce93d8; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+.mm-back {
+  background: linear-gradient(135deg, #1b5e20, #388e3c); transform: rotateY(180deg);
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+.mm-card.matched .mm-back { background: linear-gradient(135deg, #e65100, #ff9800); }
+
+.mm-best { color: #ffd54f; font-size: .95rem; margin-top: 8px; }
+
+.mm-win-overlay {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.7); z-index: 10;
+}
+.mm-win {
+  background: #1a1a2e; padding: 30px 40px; border-radius: 16px; box-shadow: 0 0 30px rgba(244,143,177,.3);
+}
+.mm-win h2 { font-size: 2.2rem; color: #f48fb1; margin-bottom: 8px; }
+.mm-win p { font-size: 1.2rem; color: #e0e0e0; margin-bottom: 16px; }
+.mm-win button {
+  padding: 10px 30px; font-size: 1.1rem; border-radius: 8px; border: none;
+  background: #f48fb1; color: #1a1a2e; cursor: pointer; font-weight: 600;
+}
+
+@media (max-width: 500px) {
+  .mm-card { width: 56px; height: 56px; }
+  .mm-grid { gap: 5px; }
+  .mm-front, .mm-back { font-size: 1.5rem; }
+}

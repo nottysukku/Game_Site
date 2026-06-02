@@ -1,0 +1,31 @@
+.gf-menu,.gf-result{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#0a1e3a,#1a0a2a);color:#fff;}
+.gf-menu h1,.gf-result h2{font-size:3rem;color:#42a5f5;text-shadow:0 0 18px #42a5f566;margin-bottom:.3rem;}
+.gf-menu p,.gf-result p{color:#aaa;font-size:1.1rem;margin-bottom:1.5rem;}
+.gf-menu button,.gf-result button{padding:1rem 2.5rem;font-size:1.3rem;background:#42a5f5;border:none;border-radius:10px;color:#fff;cursor:pointer;font-weight:bold;}
+
+.gf-root{min-height:100vh;background:linear-gradient(135deg,#0a1e3a,#1a0a2a);color:#fff;display:flex;flex-direction:column;align-items:center;padding:16px;gap:10px;}
+.gf-info{display:flex;gap:2rem;font-size:1rem;color:#aaa;}
+.gf-label{color:#666;font-size:.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;}
+.gf-cards{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;}
+
+.gf-card{width:52px;height:78px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:bold;user-select:none;}
+.gf-card.back{background:linear-gradient(135deg,#1a3a5a,#0a2a4a);border:2px solid #2a4a6a;font-size:1.6rem;color:#42a5f544;}
+.gf-card.front{background:#1a1a2e;border:2px solid #444;transition:transform .15s;}
+.gf-card.front:hover{transform:translateY(-4px);}
+.gf-r{font-size:.8rem;}.gf-su{font-size:1.3rem;}
+
+.gf-books{font-size:.85rem;color:#90caf9;}
+.gf-book-row{margin:2px 0;}
+
+.gf-log{max-height:100px;overflow-y:auto;width:100%;max-width:400px;border:1px solid #1a2a4a;border-radius:8px;padding:6px;background:#0a1020;}
+.gf-log-line{font-size:.8rem;color:#bbb;padding:2px 0;border-bottom:1px solid #1a2a3a;}
+
+.gf-ask{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.gf-ask-label{color:#90caf9;font-size:.9rem;}
+.gf-rank-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+.gf-rank-btns button{padding:6px 14px;font-size:1rem;background:#1a2a4a;border:1px solid #334;border-radius:6px;color:#eee;cursor:pointer;}
+.gf-rank-btns button.sel{background:#42a5f5;color:#fff;border-color:#42a5f5;}
+.gf-go{padding:.5rem 1.5rem;font-size:1rem;background:#42a5f5;border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:bold;}
+.gf-thinking{color:#ce93d8;font-size:1rem;animation:gfPulse .8s ease-in-out infinite alternate;}
+@keyframes gfPulse{from{opacity:.5}to{opacity:1}}
+.gf-ai,.gf-player{display:flex;flex-direction:column;align-items:center;}

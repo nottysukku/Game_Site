@@ -1,0 +1,18 @@
+.hm-root{display:flex;flex-direction:column;align-items:center;min-height:100vh;background:#0a0e1a;color:#eee;font-family:'Segoe UI',sans-serif;padding:30px 16px;gap:16px}
+.hm-root h1{font-size:2.2rem;color:#ffd740;text-shadow:0 0 14px #ffd74066;margin:0}
+.hm-canvas{background:#131830;border:2px solid #1a2a44;border-radius:10px}
+.hm-word{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.hm-letter{font-size:2rem;font-weight:700;width:36px;text-align:center;border-bottom:3px solid #334;color:transparent;transition:all .3s}
+.hm-letter.revealed{color:#69f0ae;border-color:#69f0ae}
+.hm-letter.missed{color:#ff5252;border-color:#ff5252}
+.hm-keyboard{display:flex;flex-wrap:wrap;gap:6px;max-width:500px;justify-content:center}
+.hm-key{width:38px;height:38px;border:1px solid #334;border-radius:8px;background:#161b2e;color:#ccc;font-size:1rem;font-weight:600;cursor:pointer;transition:all .15s}
+.hm-key:hover:not(:disabled){border-color:#ffd740;color:#ffd740;background:#1a2040}
+.hm-key.correct{background:#69f0ae33;border-color:#69f0ae;color:#69f0ae}
+.hm-key.wrong{background:#ff525222;border-color:#ff5252;color:#ff5252;opacity:.5}
+.hm-key:disabled{cursor:default;opacity:.4}
+.hm-status{display:flex;gap:20px;font-size:1rem;color:#888}
+.hm-win{color:#69f0ae;font-weight:700}
+.hm-lose{color:#ff5252;font-weight:700}
+.hm-restart{padding:12px 36px;background:#ffd740;border:none;border-radius:8px;color:#000;font-weight:700;font-size:1rem;cursor:pointer}
+.hm-restart:hover{background:#ffc107}

@@ -1,0 +1,27 @@
+.rm-menu{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#0a1a2e,#1a0a1e);color:#fff;}
+.rm-menu h1{font-size:3rem;color:#69f0ae;text-shadow:0 0 18px #69f0ae66;margin-bottom:.3rem;}
+.rm-menu p{color:#aaa;font-size:1.2rem;margin-bottom:1.5rem;}
+.rm-menu button{padding:1rem 2.5rem;font-size:1.3rem;background:#69f0ae;border:none;border-radius:10px;color:#000;cursor:pointer;font-weight:bold;}
+
+.rm-root{min-height:100vh;background:linear-gradient(135deg,#0a1a2e,#1a0a1e);color:#fff;display:flex;flex-direction:column;align-items:center;padding:16px;gap:12px;}
+.rm-scores{font-size:1rem;color:#aaa;}
+.rm-label{color:#888;font-size:.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;}
+.rm-hand{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+
+.rm-card{width:60px;height:90px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:bold;cursor:pointer;user-select:none;transition:transform .15s,box-shadow .15s;}
+.rm-card.facedown{background:linear-gradient(135deg,#1a3a2a,#0a2a1a);border:2px solid #2a4a3a;font-size:1.8rem;color:#69f0ae44;}
+.rm-card.faceup{background:#1a1a2a;border:2px solid #444;}
+.rm-card.faceup:hover{transform:translateY(-6px);box-shadow:0 4px 12px rgba(105,240,174,.3);}
+.rm-card.sel{border-color:#ffd740;box-shadow:0 0 10px #ffd74088;transform:translateY(-8px);}
+.rm-r{font-size:.9rem;}.rm-s{font-size:1.5rem;}
+
+.rm-mid{display:flex;gap:16px;align-items:center;}
+.rm-empty{width:60px;height:90px;border:2px dashed #69f0ae44;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#69f0ae44;font-size:.8rem;}
+.rm-discard-pile{cursor:pointer;}
+.rm-pile{cursor:pointer;}
+
+.rm-msg{color:#ffd740;font-size:1rem;text-align:center;min-height:24px;}
+.rm-btns{display:flex;gap:10px;}
+.rm-btns button{padding:.6rem 1.5rem;font-size:1rem;background:#69f0ae;border:none;border-radius:8px;color:#000;cursor:pointer;font-weight:bold;}
+.rm-btns button:disabled{opacity:.4;cursor:default;}
+.rm-ai-area,.rm-player-area{display:flex;flex-direction:column;align-items:center;}

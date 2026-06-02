@@ -1,0 +1,24 @@
+.rv-root{display:flex;flex-direction:column;align-items:center;min-height:100vh;background:#0a0e1a;color:#eee;font-family:'Segoe UI',sans-serif;padding:30px 16px;gap:18px}
+.rv-root h1{font-size:2.2rem;color:#69f0ae;text-shadow:0 0 14px #69f0ae55;margin:0}
+.rv-hud{display:flex;gap:30px;align-items:center;font-size:1.1rem}
+.rv-score-b{color:#ccc;font-weight:700}
+.rv-score-w{color:#ccc;font-weight:700}
+.rv-turn{font-size:.95rem;padding:4px 14px;border-radius:20px}
+.rv-turn.your{background:#69f0ae22;color:#69f0ae}
+.rv-turn.ai{background:#ce93d822;color:#ce93d8}
+.rv-board{display:grid;grid-template-columns:repeat(8,56px);grid-template-rows:repeat(8,56px);gap:1px;background:#1a2a44;border:2px solid #1a2a44;border-radius:6px}
+.rv-cell{background:#1b5e20;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:background .15s}
+.rv-cell.valid:hover{background:#2e7d32}
+.rv-piece{width:42px;height:42px;border-radius:50%;transition:all .3s}
+.rv-piece.black{background:radial-gradient(circle at 35% 35%,#555,#111);box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.rv-piece.white{background:radial-gradient(circle at 35% 35%,#fff,#ccc);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.rv-piece.flipped{animation:rvFlip .4s ease-out}
+@keyframes rvFlip{0%{transform:scale(1)}50%{transform:scale(0.1) rotateY(90deg)}100%{transform:scale(1) rotateY(0)}}
+.rv-hint{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.15)}
+.rv-over{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:20;gap:8px}
+.rv-over h2{font-size:2.5rem;color:#69f0ae;text-shadow:0 0 20px #69f0ae;margin:0}
+.rv-over p{font-size:1.2rem;color:#ccc}
+.rv-over button{padding:12px 36px;font-size:1.1rem;background:#69f0ae;border:none;border-radius:8px;color:#000;font-weight:700;cursor:pointer}
+.rv-restart{padding:10px 24px;background:transparent;border:1px solid #334;border-radius:8px;color:#aaa;cursor:pointer;font-size:.9rem}
+.rv-restart:hover{border-color:#666;color:#eee}
+@media(max-width:500px){.rv-board{grid-template-columns:repeat(8,40px);grid-template-rows:repeat(8,40px)}.rv-piece{width:30px;height:30px}}

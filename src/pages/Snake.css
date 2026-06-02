@@ -1,0 +1,28 @@
+.snake-root {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; background: linear-gradient(180deg, #0a0e1a, #0d1a12); gap: 12px;
+  position: relative;
+  /* top: -100px; */
+}
+.snake-title { font-size: 32px; color: #69f0ae; text-shadow: 0 0 16px rgba(105,240,174,0.4); }
+.snake-hud { display: flex; gap: 24px; font-size: 18px; font-weight: 600; }
+.snake-score { color: #69f0ae; }
+.snake-high { color: #7a8ba8; }
+.snake-canvas { border: 2px solid rgba(105,240,174,0.2); border-radius: 10px; box-shadow: 0 0 30px rgba(105,240,174,0.1); }
+.snake-gameover {
+  position: absolute; top: 30%; left: 50%; transform: translate(-50%,-50%);
+  background: rgba(0,0,0,0.9); padding: 32px 48px; border-radius: 16px;
+  text-align: center; border: 2px solid #ff5252; z-index: 10;
+}
+.snake-gameover h2 { color: #ff5252; font-size: 32px; margin-bottom: 10px; }
+.snake-gameover p { color: #e6eef6; font-size: 20px; margin-bottom: 16px; }
+.snake-gameover button {
+  padding: 10px 28px; border-radius: 8px; border: none; background: #69f0ae; color: #000;
+  font-size: 16px; font-weight: 700; cursor: pointer; transition: all .2s;
+}
+.snake-gameover button:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(105,240,174,0.4); }
+.snake-controls { color: #7a8ba8; }
+.snake-controls select {
+  margin-left: 8px; padding: 4px 10px; border-radius: 6px; border: 1px solid #333;
+  background: #1a1e2e; color: #e6eef6; cursor: pointer;
+}

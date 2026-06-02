@@ -1,0 +1,133 @@
+.menu-root {
+  width: 100vw;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: linear-gradient(135deg, #0a0e1a 0%, #101830 40%, #0d1225 100%);
+  position: relative;
+}
+
+.menu-particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.menu-content {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 60px;
+  text-align: center;
+}
+
+.menu-title {
+  font-size: 64px;
+  margin-bottom: 4px;
+  letter-spacing: 8px;
+  font-weight: 900;
+}
+
+.title-glow {
+  background: linear-gradient(90deg, #00e5ff, #e040fb, #ffd740, #00e5ff);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: titleShift 4s ease infinite;
+  filter: drop-shadow(0 0 24px rgba(0, 229, 255, 0.4));
+}
+
+@keyframes titleShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.menu-subtitle {
+  color: #7a8ba8;
+  font-size: 18px;
+  margin-bottom: 40px;
+  letter-spacing: 2px;
+}
+
+.menu-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.menu-card {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 28px 18px 22px;
+  cursor: pointer;
+  color: #e6eef6;
+  text-align: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  outline: none;
+  font-family: inherit;
+}
+
+.menu-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--card-color), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.menu-card:hover::before {
+  opacity: 1;
+}
+
+.menu-card:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 30px color-mix(in srgb, var(--card-color) 30%, transparent);
+  background: rgba(255,255,255,0.08);
+}
+
+.menu-card:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.card-icon {
+  font-size: 42px;
+  display: block;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));
+  transition: transform .3s;
+}
+
+.menu-card:hover .card-icon {
+  transform: scale(1.2) rotate(-5deg);
+}
+
+.menu-card h3 {
+  font-size: 18px;
+  margin-bottom: 6px;
+  font-weight: 700;
+  color: var(--card-color);
+}
+
+.menu-card p {
+  font-size: 13px;
+  color: #7a8ba8;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .menu-title { font-size: 36px; letter-spacing: 4px; }
+  .menu-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .menu-card { padding: 18px 12px 16px; }
+}

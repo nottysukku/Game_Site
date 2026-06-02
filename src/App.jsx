@@ -1,156 +1,123 @@
-import React, { useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import reactImage from './assets/github.png';
-import boyImage from './assets/boy.png';
-import newImage from './assets/1269.png_860-removebg-preview.png';
-import godofwar from './assets/cartoongaming2-removebg-preview.png';
-import callofduty from './assets/cartoongaming-removebg-preview.png';
-import Nav from './components/Nav';
-import Button from './Button';
-import Button1 from './Button1';
-import Button2 from './Button2';
-import Foot from './components/Foot';
-import Carousel from './components/Carousel';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './App.css';
 
+const GameSiteLanding = lazy(() => import('./pages/GameSiteLanding'));
 
-const FuturisticCarouselContainer = ({ children }) => {
+const Pong = lazy(() => import('./pages/Pong'));
+const TicTacToe = lazy(() => import('./pages/TicTacToe'));
+const RPS = lazy(() => import('./pages/RPS'));
+const Snake = lazy(() => import('./pages/Snake'));
+const Racing = lazy(() => import('./pages/Racing'));
+const TempleRunner = lazy(() => import('./pages/TempleRunner2'));
+const StickFighter = lazy(() => import('./pages/StickFighter'));
+const Solitaire = lazy(() => import('./pages/Solitaire'));
+const FlappyBird = lazy(() => import('./pages/FlappyBird'));
+const Breakout = lazy(() => import('./pages/Breakout'));
+const Chess = lazy(() => import('./pages/Chess'));
+const TeenPatti = lazy(() => import('./pages/TeenPatti'));
+const Rummy = lazy(() => import('./pages/Rummy'));
+const GoFish = lazy(() => import('./pages/GoFish'));
+const Checkers = lazy(() => import('./pages/Checkers'));
+const Minesweeper = lazy(() => import('./pages/Minesweeper'));
+const Game2048 = lazy(() => import('./pages/Game2048'));
+const Wordle = lazy(() => import('./pages/Wordle'));
+const ConnectFour = lazy(() => import('./pages/ConnectFour'));
+const Sudoku = lazy(() => import('./pages/Sudoku'));
+const MemoryMatch = lazy(() => import('./pages/MemoryMatch'));
+const Tetris = lazy(() => import('./pages/Tetris'));
+const SpaceInvaders = lazy(() => import('./pages/SpaceInvaders'));
+const Hangman = lazy(() => import('./pages/Hangman'));
+const TypingTest = lazy(() => import('./pages/TypingTest'));
+const WhackAMole = lazy(() => import('./pages/WhackAMole'));
+const SimonSays = lazy(() => import('./pages/SimonSays'));
+const TowerOfHanoi = lazy(() => import('./pages/TowerOfHanoi'));
+const Reversi = lazy(() => import('./pages/Reversi'));
+const DoodleJump = lazy(() => import('./pages/DoodleJump'));
+const ReactionTest = lazy(() => import('./pages/ReactionTest'));
+const GravityGuyRush = lazy(() => import('./pages/GravityGuyRush'));
+const PocketTanks3D = lazy(() => import('./pages/PocketTanks3D'));
+const NeonTagArena = lazy(() => import('./pages/NeonTagArena'));
+const CrystalCometClash = lazy(() => import('./pages/CrystalCometClash'));
+const BombRelay3D = lazy(() => import('./pages/BombRelay3D'));
+const ZoneControl3D = lazy(() => import('./pages/ZoneControl3D'));
+const MeteorMayhem3D = lazy(() => import('./pages/MeteorMayhem3D'));
+const QuadDashCircuit = lazy(() => import('./pages/QuadDashCircuit'));
+const LaserLootArena = lazy(() => import('./pages/LaserLootArena'));
+const CrownRush3D = lazy(() => import('./pages/CrownRush3D'));
+const OrbHarvest3D = lazy(() => import('./pages/OrbHarvest3D'));
+const HoverBump3D = lazy(() => import('./pages/HoverBump3D'));
+const PulsePit3D = lazy(() => import('./pages/PulsePit3D'));
+const TurboTotem3D = lazy(() => import('./pages/TurboTotem3D'));
+const VaultRaid3D = lazy(() => import('./pages/VaultRaid3D'));
+const Badminton = lazy(() => import('./pages/Badminton'));
+const SoccerHeads = lazy(() => import('./pages/SoccerHeads'));
+
+function Loader() {
   return (
-    <div className="relative w-full max-w-4xl mx-auto">
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-blue-800 to-red-800 rounded-3xl opacity-50"
-        animate={{
-          scale: [1.2, 1.02, 1.2],
-          opacity: [0.5, 0.7, 0.5],
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
-      <div className="relative rounded-3xl overflow-hidden border-4 border-blue-100">
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-red-400 to-red-800 opacity-50"
-          animate={{
-            x: ["-100%", "100%"],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-        />
-        <div className="relative z-10">
-          {children}
-        </div>
-      </div>
+    <div className="flex flex-col items-center justify-center w-screen h-screen bg-black text-white">
+      <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4" />
+      <p className="text-xl font-bold tracking-widest text-cyan-400 animate-pulse">LOADING...</p>
     </div>
-  );
-};
-
-function App() {
-  const footerRef = useRef(null);
-  const carouselRef = useRef(null);
-  const [showButton, setShowButton] = useState(false);
-  const [showButton1, setShowButton1] = useState(false);
-  const [showButton2, setShowButton2] = useState(false);
-
-  const handleReactImageClick = () => {
-    window.open('https://github.com/nottysukku', '_blank');
-  };
-
-  const handleContactClick = (e) => {
-    e.preventDefault();
-    if (footerRef.current) {
-      footerRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleGamesClick = (e) => {
-    e.preventDefault();
-    if (carouselRef.current) {
-      carouselRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleTicTacToeClick = () => {
-    setShowButton(true);
-    setShowButton1(false);
-    setShowButton2(false);
-  };
-
-  const handleSnakeClick = () => {
-    setShowButton(false);
-    setShowButton2(false);
-    setShowButton1(true);
-  };
-
-  const handleSnakesandLaddersClick = () => {
-    setShowButton(false);
-    setShowButton2(true);
-    setShowButton1(false);
-  };
-
-  if (showButton) {
-    return <Button />;
-  }
-  if (showButton1) {
-    return <Button1 />;
-  }
-  if (showButton2) {
-    return <Button2 />;
-  }
-
-  return (
-    <>
-      <div className="relative min-h-[2rem] bg-[#1F2937] text-gray-100 flex flex-col md:flex-row justify-between items-center text-center p-4 group">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-800 to-blue-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-        <div className="relative flex w-full flex-col md:flex-row justify-between items-center space-x-4 z-10">
-          <img
-            src={reactImage}
-            alt="react"
-            onClick={handleReactImageClick}
-            className="cursor-pointer w-12 h-12 rounded-full transition duration-300"
-          />
-          <div id="heading" className="flex-grow text-indigo-300 text-2xl md:text-5xl font-bold md:w-auto md:text-center">
-            PlaySphere: Adventure Awaits
-          </div>
-          <Nav
-            onContactClick={handleContactClick}
-            onGamesClick={handleGamesClick}
-          />
-        </div>
-      </div>
-      <div className="w-full min-h-screen bg-gradient-to-r from-black via-blue-500 to-black text-white flex flex-col justify-between items-center">
-        <div className="flex flex-col md:flex-row md:space-x-4 w-full md:w-auto p-4 space-y-4 md:space-y-0">
-          <img src={godofwar} className='sm:w-4/12 md:w-3/12 h-auto border-4 rounded-3xl border-transparent transition-all duration-300 hover:shadow-2xl' alt="god of war" />
-          <img src={boyImage} className='lg:block hidden sm:w-4/12 md:w-3/12 h-auto border-4 rounded-3xl border-transparent transition-all duration-300 hover:shadow-2xl' alt="boy" />
-          <img src={newImage} className='lg:block hidden sm:w-4/12 md:w-3/12 h-auto border-4 rounded-3xl border-transparent transition-all duration-300 hover:shadow-2xl' alt="new" />
-          <img src={callofduty} className='sm:w-4/12 md:w-3/12 h-auto border-4 rounded-3xl border-transparent transition-all duration-300 hover:shadow-2xl' alt="call of duty" />
-        </div>
-
-        <div ref={carouselRef}>
-          <FuturisticCarouselContainer>
-            <Carousel
-              onTicTacToeClick={handleTicTacToeClick}
-              onSnakeClick={handleSnakeClick}
-              onSnakesandLaddersClick={handleSnakesandLaddersClick}
-            />
-          </FuturisticCarouselContainer>
-        </div>
-
-        <h1 className="text-lg md:text-2xl lg:text-4xl font-bold w-full md:w-3/4 lg:w-3/6 h-auto border-4 rounded-3xl border-transparent transition-all duration-300 hover:shadow-xl text-center px-4 py-8">
-          Every setback is a setup for a comeback. Embrace challenges as opportunities to grow. With each defeat, learn, adapt, and push harder. Remember, the road to victory is paved with persistence and skill. Keep grinding, and the triumph will be yours. Game on!
-        </h1>
-        <p onClick={handleGamesClick} className='mb-4 border-4 rounded-3xl border-transparent transition-all duration-300 cursor-pointer hover:border-cyan-400 hover:shadow-xl px-4 py-2'>
-          Check the carousel for games!
-        </p>
-      </div>
-      <div ref={footerRef}>
-        <Foot />
-      </div>
-    </>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<Loader />}>
+        <Routes>
+          <Route path="/" element={<GameSiteLanding />} />
+          <Route path="/pong" element={<Pong />} />
+          <Route path="/tictactoe" element={<TicTacToe />} />
+          <Route path="/rps" element={<RPS />} />
+          <Route path="/snake" element={<Snake />} />
+          <Route path="/racing" element={<Racing />} />
+          <Route path="/templerunner" element={<TempleRunner />} />
+          <Route path="/stickfighter" element={<StickFighter />} />
+          <Route path="/solitaire" element={<Solitaire />} />
+          <Route path="/flappybird" element={<FlappyBird />} />
+          <Route path="/breakout" element={<Breakout />} />
+          <Route path="/chess" element={<Chess />} />
+          <Route path="/teenpatti" element={<TeenPatti />} />
+          <Route path="/rummy" element={<Rummy />} />
+          <Route path="/gofish" element={<GoFish />} />
+          <Route path="/checkers" element={<Checkers />} />
+          <Route path="/minesweeper" element={<Minesweeper />} />
+          <Route path="/2048" element={<Game2048 />} />
+          <Route path="/wordle" element={<Wordle />} />
+          <Route path="/connectfour" element={<ConnectFour />} />
+          <Route path="/sudoku" element={<Sudoku />} />
+          <Route path="/memorymatch" element={<MemoryMatch />} />
+          <Route path="/tetris" element={<Tetris />} />
+          <Route path="/spaceinvaders" element={<SpaceInvaders />} />
+          <Route path="/hangman" element={<Hangman />} />
+          <Route path="/typingtest" element={<TypingTest />} />
+          <Route path="/whackamole" element={<WhackAMole />} />
+          <Route path="/simonsays" element={<SimonSays />} />
+          <Route path="/towerofhanoi" element={<TowerOfHanoi />} />
+          <Route path="/reversi" element={<Reversi />} />
+          <Route path="/doodlejump" element={<DoodleJump />} />
+          <Route path="/reactiontest" element={<ReactionTest />} />
+          <Route path="/gravityguyrush" element={<GravityGuyRush />} />
+          <Route path="/pockettanks3d" element={<PocketTanks3D />} />
+          <Route path="/neontagarena" element={<NeonTagArena />} />
+          <Route path="/crystalcometclash" element={<CrystalCometClash />} />
+          <Route path="/bombrelay3d" element={<BombRelay3D />} />
+          <Route path="/zonecontrol3d" element={<ZoneControl3D />} />
+          <Route path="/meteormayhem3d" element={<MeteorMayhem3D />} />
+          <Route path="/quaddashcircuit" element={<QuadDashCircuit />} />
+          <Route path="/laserlootarena" element={<LaserLootArena />} />
+          <Route path="/crownrush3d" element={<CrownRush3D />} />
+          <Route path="/orbharvest3d" element={<OrbHarvest3D />} />
+          <Route path="/hoverbump3d" element={<HoverBump3D />} />
+          <Route path="/pulsepit3d" element={<PulsePit3D />} />
+          <Route path="/turbototem3d" element={<TurboTotem3D />} />
+          <Route path="/vaultraid3d" element={<VaultRaid3D />} />
+          <Route path="/badminton" element={<Badminton />} />
+          <Route path="/soccerheads" element={<SoccerHeads />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+}

@@ -1,0 +1,24 @@
+.toh-root{display:flex;flex-direction:column;align-items:center;min-height:100vh;background:#0a0e1a;color:#eee;font-family:'Segoe UI',sans-serif;padding:30px 16px;gap:20px}
+.toh-root h1{font-size:2.2rem;color:#ffd740;text-shadow:0 0 14px #ffd74055;margin:0}
+.toh-hud{display:flex;gap:24px;align-items:center;font-size:1rem;color:#888}
+.toh-hud strong{color:#ffd740}
+.toh-disk-sel{display:flex;gap:4px}
+.toh-disk-sel button{width:32px;height:32px;border:1px solid #334;border-radius:6px;background:#161b2e;color:#aaa;cursor:pointer;font-size:.9rem}
+.toh-disk-sel button.active{background:#ffd740;color:#000;border-color:#ffd740;font-weight:700}
+.toh-board{display:flex;gap:40px;justify-content:center;margin-top:20px}
+.toh-peg{position:relative;width:200px;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:pointer;padding-bottom:10px;border-radius:12px;transition:all .15s;border:2px solid transparent}
+.toh-peg.selected{border-color:#ffd740;background:#ffd74011}
+.toh-peg:hover{background:#ffffff08}
+.toh-rod{position:absolute;bottom:30px;width:6px;height:200px;background:#555;border-radius:3px}
+.toh-disks{display:flex;flex-direction:column;align-items:center;gap:3px;z-index:1}
+.toh-disk{height:22px;border-radius:11px;transition:all .2s}
+.toh-disk.lifting{transform:translateY(-20px);box-shadow:0 8px 20px rgba(255,215,64,.3)!important}
+.toh-base{width:180px;height:8px;background:#555;border-radius:4px;margin-top:4px}
+.toh-peg-label{font-size:.8rem;color:#666;margin-top:6px}
+.toh-won{display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;background:#131830;border-radius:14px;border:2px solid #ffd740}
+.toh-won h2{font-size:2rem;color:#ffd740;margin:0}
+.toh-won p{color:#ccc;font-size:1.1rem;margin:0}
+.toh-won button{padding:12px 36px;background:#ffd740;border:none;border-radius:8px;color:#000;font-weight:700;font-size:1rem;cursor:pointer}
+.toh-restart{padding:10px 24px;background:transparent;border:1px solid #334;border-radius:8px;color:#aaa;cursor:pointer;font-size:.9rem}
+.toh-restart:hover{border-color:#666;color:#eee}
+@media(max-width:700px){.toh-board{flex-direction:column;gap:16px;align-items:center}.toh-peg{width:90%;min-height:140px}}

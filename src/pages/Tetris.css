@@ -1,0 +1,18 @@
+.tetris-root{display:flex;height:100vh;background:#0a0e1a;color:#eee;font-family:'Segoe UI',sans-serif;overflow:hidden}
+.tetris-side{width:220px;padding:24px 18px;display:flex;flex-direction:column;gap:14px;background:#0d1225;border-right:1px solid #1a2a44}
+.tetris-side h1{font-size:2rem;color:#00e5ff;text-shadow:0 0 14px #00e5ff66;margin:0}
+.tetris-stat{display:flex;justify-content:space-between;font-size:1rem;padding:6px 0;border-bottom:1px solid #1a2a44}
+.tetris-stat label{color:#888}
+.tetris-stat span{color:#ffd740;font-weight:700}
+.tetris-paused{color:#ffd740;font-size:1.3rem;font-weight:700;text-align:center;animation:chPulse .6s ease-in-out infinite alternate}
+.tetris-controls{font-size:.78rem;color:#666;display:flex;flex-direction:column;gap:2px;margin-top:auto}
+.tetris-controls p{margin:0}
+.tetris-restart{padding:12px;background:#00e5ff;border:none;border-radius:8px;color:#000;font-weight:700;font-size:1rem;cursor:pointer}
+.tetris-restart:hover{background:#18ffff}
+.tetris-board-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+.tetris-canvas{border:2px solid #00e5ff44;border-radius:4px;box-shadow:0 0 30px rgba(0,229,255,.08)}
+.tetris-over{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.8);border-radius:4px}
+.tetris-over h2{font-size:2.5rem;color:#00e5ff;text-shadow:0 0 20px #00e5ff;margin:0}
+.tetris-over p{color:#ccc;font-size:1.2rem}
+@keyframes chPulse{from{opacity:.6}to{opacity:1}}
+@media(max-width:600px){.tetris-root{flex-direction:column;height:auto;min-height:100vh}.tetris-side{width:100%;flex-direction:row;flex-wrap:wrap;padding:10px;gap:8px;border-right:none;border-bottom:1px solid #1a2a44}.tetris-side h1{font-size:1.3rem}}

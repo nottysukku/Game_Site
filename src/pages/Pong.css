@@ -1,0 +1,68 @@
+.pong-root {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; background: linear-gradient(135deg, #0a0e1a, #101830);
+  gap: 16px;
+}
+.pong-hud {
+  display: flex; align-items: center; gap: 32px; font-size: 28px; font-weight: 700;
+}
+.pong-score { padding: 8px 20px; border-radius: 10px; background: rgba(0,0,0,0.5); }
+.pong-score.cyan { color: #00e5ff; border: 2px solid #00e5ff; text-shadow: 0 0 10px #00e5ff; }
+.pong-score.red { color: #ff5252; border: 2px solid #ff5252; text-shadow: 0 0 10px #ff5252; }
+.pong-rally { color: #7a8ba8; font-size: 16px; }
+.pong-canvas {
+  border: 2px solid rgba(0,229,255,0.2); border-radius: 12px;
+  box-shadow: 0 0 40px rgba(0,229,255,0.1);
+}
+.pong-controls {
+  display: flex; align-items: center; gap: 16px; color: #9aa4b2;
+}
+.pong-controls select {
+  margin-left: 8px; padding: 4px 10px; border-radius: 6px; border: 1px solid #333;
+  background: #1a1e2e; color: #e6eef6; cursor: pointer;
+}
+.pong-controls button {
+  padding: 6px 18px; border-radius: 6px; border: 1px solid #00e5ff; background: transparent;
+  color: #00e5ff; cursor: pointer; transition: all .2s;
+}
+.pong-controls button:hover { background: #00e5ff; color: #000; }
+.pong-keys { font-size: 14px; color: #7a8ba8; letter-spacing: 0.5px; }
+
+/* Menu */
+.pong-menu {
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+.pong-title {
+  font-size: 72px; font-weight: 900; letter-spacing: 12px;
+  background: linear-gradient(135deg, #00e5ff, #ff5252);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: none; margin-bottom: 12px;
+}
+.pong-menu-btn {
+  width: 220px; padding: 14px 0; border-radius: 10px; font-size: 20px;
+  font-weight: 700; cursor: pointer; transition: all .25s; border: 2px solid;
+  background: transparent; letter-spacing: 1px;
+}
+.pong-menu-btn.cyan {
+  color: #00e5ff; border-color: #00e5ff;
+  box-shadow: 0 0 16px rgba(0,229,255,0.2);
+}
+.pong-menu-btn.cyan:hover {
+  background: #00e5ff; color: #0a0e1a;
+  box-shadow: 0 0 30px rgba(0,229,255,0.5);
+}
+.pong-menu-btn.red {
+  color: #ff5252; border-color: #ff5252;
+  box-shadow: 0 0 16px rgba(255,82,82,0.2);
+}
+.pong-menu-btn.red:hover {
+  background: #ff5252; color: #0a0e1a;
+  box-shadow: 0 0 30px rgba(255,82,82,0.5);
+}
+.pong-diff-row {
+  display: flex; align-items: center; gap: 10px; color: #7a8ba8; font-size: 14px;
+}
+.pong-diff-row select {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #333;
+  background: #1a1e2e; color: #e6eef6; cursor: pointer;
+}

@@ -1,0 +1,11 @@
+.fb-root { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #0a0e1a; }
+.fb-canvas { display: block; width: 100%; height: 100%; }
+.fb-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,.55); z-index: 2; cursor: pointer; }
+.fb-overlay h1 { font-size: 3rem; color: #ffd740; text-shadow: 0 0 20px #ffd740; margin-bottom: .5rem; }
+.fb-overlay p { color: #eee; font-size: 1.3rem; margin: .3rem; }
+.fb-best { opacity: .7; }
+.fb-gameover { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,.8); z-index: 3; }
+.fb-gameover h2 { font-size: 3rem; color: #ff5252; text-shadow: 0 0 20px #ff5252; margin-bottom: .5rem; }
+.fb-gameover p { color: #eee; font-size: 1.4rem; margin: .3rem; }
+.fb-gameover button { margin-top: 1rem; padding: .8rem 2rem; font-size: 1.2rem; background: #ffd740; border: none; border-radius: 8px; color: #000; cursor: pointer; font-weight: bold; }
+.fb-gameover button:hover { background: #ffc107; }

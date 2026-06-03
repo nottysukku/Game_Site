@@ -1,33 +1,36 @@
+/* ===== MainMenu.css - Honeycomb Horizontal sliding canvas ===== */
+
 .menu-root {
   width: 100vw;
   height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: linear-gradient(135deg, #0a0e1a 0%, #101830 40%, #0d1225 100%);
+  overflow: hidden;
+  background: radial-gradient(circle at center, #0f172a 0%, #030712 100%);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .menu-particles {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
 }
 
-.menu-content {
+.menu-header {
   position: relative;
-  z-index: 1;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 48px 24px 60px;
+  z-index: 2;
   text-align: center;
+  padding: 30px 20px 10px;
+  flex-shrink: 0;
 }
 
 .menu-title {
-  font-size: 64px;
-  margin-bottom: 4px;
-  letter-spacing: 8px;
+  font-size: 52px;
+  margin-bottom: 2px;
+  letter-spacing: 10px;
   font-weight: 900;
+  text-shadow: 0 0 40px rgba(0, 229, 255, 0.35);
 }
 
 .title-glow {
@@ -37,7 +40,6 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: titleShift 4s ease infinite;
-  filter: drop-shadow(0 0 24px rgba(0, 229, 255, 0.4));
 }
 
 @keyframes titleShift {
@@ -46,88 +48,119 @@
 }
 
 .menu-subtitle {
-  color: #7a8ba8;
-  font-size: 18px;
-  margin-bottom: 40px;
+  color: #64748b;
+  font-size: 14px;
   letter-spacing: 2px;
-}
-
-.menu-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
-}
-
-.menu-card {
-  position: relative;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 16px;
-  padding: 28px 18px 22px;
-  cursor: pointer;
-  color: #e6eef6;
-  text-align: center;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  outline: none;
-  font-family: inherit;
-}
-
-.menu-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 16px;
-  padding: 2px;
-  background: linear-gradient(135deg, var(--card-color), transparent 60%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.menu-card:hover::before {
-  opacity: 1;
-}
-
-.menu-card:hover {
-  transform: translateY(-8px) scale(1.03);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 30px color-mix(in srgb, var(--card-color) 30%, transparent);
-  background: rgba(255,255,255,0.08);
-}
-
-.menu-card:active {
-  transform: translateY(-2px) scale(0.98);
-}
-
-.card-icon {
-  font-size: 42px;
-  display: block;
-  margin-bottom: 10px;
-  filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));
-  transition: transform .3s;
-}
-
-.menu-card:hover .card-icon {
-  transform: scale(1.2) rotate(-5deg);
-}
-
-.menu-card h3 {
-  font-size: 18px;
-  margin-bottom: 6px;
-  font-weight: 700;
-  color: var(--card-color);
-}
-
-.menu-card p {
-  font-size: 13px;
-  color: #7a8ba8;
+  text-transform: uppercase;
   margin: 0;
 }
 
-@media (max-width: 600px) {
-  .menu-title { font-size: 36px; letter-spacing: 4px; }
-  .menu-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .menu-card { padding: 18px 12px 16px; }
+/* Sliding Canvas Layout */
+.sliding-canvas-wrapper {
+  flex-grow: 1;
+  width: 100vw;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+  scrollbar-width: none; /* Hide scrollbar Firefox */
+  -ms-overflow-style: none;  /* Hide scrollbar IE/Edge */
+  user-select: none;
+}
+
+.sliding-canvas-wrapper::-webkit-scrollbar {
+  display: none; /* Hide scrollbar Chrome/Safari/Webkit */
+}
+
+/* Staggered Honeycomb Grid (Horizontally expanding) */
+.honeycomb-grid {
+  display: grid;
+  grid-template-rows: repeat(3, 210px);
+  grid-auto-flow: column;
+  gap: 25px 35px;
+  padding: 40px 120px;
+  width: max-content; /* vital for scrolling horizontally */
+}
+
+/* Stagger columns vertically like honeycomb bricks */
+.honeycomb-item.row-1 {
+  transform: translateY(-20px);
+}
+.honeycomb-item.row-2 {
+  transform: translateY(0);
+}
+.honeycomb-item.row-3 {
+  transform: translateY(20px);
+}
+
+/* Rectangular Game Card style */
+.menu-card {
+  width: 290px;
+  height: 185px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: grab;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.card-image-container {
+  width: 100%;
+  height: 110px;
+  overflow: hidden;
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+  pointer-events: none;
+}
+
+.menu-card:hover .card-image {
+  transform: scale(1.08);
+}
+
+.card-details {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1;
+}
+
+.menu-card h3 {
+  font-size: 15px;
+  margin: 0 0 3px 0;
+  font-weight: 700;
+  color: var(--card-color);
+  letter-spacing: 0.5px;
+}
+
+.menu-card p {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hover effects matching game color */
+.menu-card:hover {
+  border-color: var(--card-color);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px color-mix(in srgb, var(--card-color) 45%, transparent);
+}
+
+.menu-card:active {
+  cursor: grabbing;
 }

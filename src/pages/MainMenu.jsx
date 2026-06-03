@@ -53,7 +53,8 @@ const games = [
   { path: '/vaultraid3d', icon: '🏦', title: 'Vault Raid 3D', desc: '3-4P high-value orb raid', color: '#80deea' },
   { path: '/badminton', icon: '🏸', title: 'Badminton', desc: '1v1 Stickman local multiplayer', color: '#87CEEB' },
   { path: '/soccerheads', icon: '⚽', title: 'Soccer Heads', desc: '1v1 physics with superpowers', color: '#ff5252' },
-  { path: '/racing4p', icon: '🏎️', title: '2D Racer 4P', desc: '4P Top-down grand prix with CPU drivers', color: '#00ffd4' }
+  { path: '/racing4p', icon: '🏎️', title: '2D Racer 4P', desc: '4P Top-down grand prix with CPU drivers', color: '#00ffd4' },
+  { path: '/fps3d', icon: '🔫', title: 'Cyber Elite FPS', desc: '1v1 WebRTC tactical shooter with guns and grenades', color: '#ff3d00' }
 ];
 
 const FuturisticCarouselContainer = ({ children }) => {

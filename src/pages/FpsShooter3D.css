@@ -1,0 +1,741 @@
+/* src/pages/FpsShooter3D.css */
+
+.fps-root {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  background-color: #030206;
+  color: #e2e8f0;
+  font-family: 'Space Grotesk', 'Courier New', monospace;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ──────────────── LOBBY & MENU OVERLAYS ──────────────── */
+
+.fps-lobby-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(16, 12, 34, 0.95) 0%, rgba(3, 2, 7, 0.98) 100%);
+  z-index: 50;
+  padding: 20px;
+}
+
+.fps-lobby-box {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(14, 10, 27, 0.75);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 24px;
+  padding: 35px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 229, 255, 0.05);
+  text-align: center;
+  position: relative;
+}
+
+.fps-lobby-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00e5ff, #ff007f, transparent);
+}
+
+.fps-lobby-box h1 {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  background: linear-gradient(135deg, #00e5ff 0%, #ff007f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.3));
+}
+
+.fps-lobby-sub {
+  font-size: 11px;
+  color: rgba(0, 229, 255, 0.6);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 30px;
+}
+
+.fps-team-select {
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.fps-team-select label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.fps-team-options {
+  display: flex;
+  gap: 12px;
+}
+
+.fps-team-btn {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.fps-team-btn.t-red {
+  color: #ff3d00;
+}
+.fps-team-btn.t-red:hover {
+  background: rgba(255, 61, 0, 0.1);
+  border-color: rgba(255, 61, 0, 0.4);
+}
+.fps-team-btn.t-red.active {
+  background: #ff3d00;
+  color: #000;
+  border-color: #ff3d00;
+  box-shadow: 0 0 15px rgba(255, 61, 0, 0.4);
+}
+
+.fps-team-btn.ct-blue {
+  color: #00b0ff;
+}
+.fps-team-btn.ct-blue:hover {
+  background: rgba(0, 176, 255, 0.1);
+  border-color: rgba(0, 176, 255, 0.4);
+}
+.fps-team-btn.ct-blue.active {
+  background: #00b0ff;
+  color: #000;
+  border-color: #00b0ff;
+  box-shadow: 0 0 15px rgba(0, 176, 255, 0.4);
+}
+
+.fps-action-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.fps-action-btn {
+  width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s;
+  background: linear-gradient(135deg, #00e5ff 0%, #0088ff 100%);
+  border: none;
+  color: #000;
+  box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2);
+}
+
+.fps-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 229, 255, 0.35);
+}
+
+.fps-action-btn.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  box-shadow: none;
+}
+
+.fps-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(0, 229, 255, 0.4);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+}
+
+.fps-join-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.fps-join-section label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.fps-input-code {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 12px;
+  padding: 14px;
+  color: #fff;
+  font-size: 20px;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  outline: none;
+  text-transform: uppercase;
+  transition: all 0.25s;
+}
+
+.fps-input-code:focus {
+  border-color: #00e5ff;
+  background: rgba(0, 229, 255, 0.05);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+}
+
+.fps-waiting-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.fps-code-display {
+  font-size: 36px;
+  font-weight: 900;
+  color: #00e5ff;
+  letter-spacing: 0.2em;
+  background: rgba(0, 229, 255, 0.05);
+  padding: 15px 30px;
+  border-radius: 16px;
+  border: 1px dashed rgba(0, 229, 255, 0.3);
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+}
+
+.fps-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 229, 255, 0.1);
+  border-top-color: #ff007f;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.fps-back-btn {
+  margin-top: 25px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+  transition: color 0.25s;
+}
+
+.fps-back-btn:hover {
+  color: #fff;
+}
+
+.fps-error {
+  color: #ff3d00;
+  font-size: 13px;
+  margin-top: 15px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* ──────────────── INTRO LOCK SCREEN OVERLAY ──────────────── */
+
+.fps-lock-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 2, 7, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  font-family: monospace;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.fps-lock-box {
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid #ff007f;
+  box-shadow: 0 0 35px rgba(255, 0, 127, 0.25);
+  padding: 30px;
+  border-radius: 16px;
+  max-width: 380px;
+  width: 90%;
+}
+
+.fps-lock-box h2 {
+  color: #ff007f;
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.fps-lock-box ul {
+  text-align: left;
+  color: #aaa;
+  margin-bottom: 25px;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.fps-lock-box li strong {
+  color: #fff;
+}
+
+.fps-lock-btn {
+  padding: 12px 28px;
+  background: #ff007f;
+  color: #fff;
+  border: none;
+  font-weight: 800;
+  border-radius: 8px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ──────────────── GAMEPLAY HUD & OVERLAYS ──────────────── */
+
+.fps-hud-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Central Reticle Crosshair */
+.fps-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
+.fps-crosshair::before,
+.fps-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(0, 255, 127, 0.8);
+}
+
+/* Horizontal crosshair lines */
+.fps-crosshair::before {
+  top: 6px;
+  left: 0;
+  width: 14px;
+  height: 2px;
+}
+
+/* Vertical crosshair lines */
+.fps-crosshair::after {
+  top: 0;
+  left: 6px;
+  width: 2px;
+  height: 14px;
+}
+
+/* Center dot */
+.fps-crosshair-dot {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(0, 255, 127, 1);
+  box-shadow: 0 0 5px rgba(0, 255, 127, 0.8);
+}
+
+/* Damage Hit Indicators */
+.fps-damage-indicator {
+  position: absolute;
+  inset: 0;
+  border: 0px solid rgba(255, 0, 60, 0);
+  pointer-events: none;
+  transition: border-width 0.05s ease-out, border-color 0.05s ease-out;
+  box-shadow: inset 0 0 0px rgba(255, 0, 60, 0);
+}
+
+.fps-damage-indicator.active {
+  border-width: 15px;
+  border-color: rgba(255, 0, 60, 0.45);
+  box-shadow: inset 0 0 80px rgba(255, 0, 60, 0.6);
+}
+
+/* Health and Grenade HUD widgets (Bottom Left) */
+.fps-hud-left {
+  position: absolute;
+  bottom: 25px;
+  left: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fps-hud-card {
+  background: rgba(6, 4, 15, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 5px solid #00e5ff;
+  border-radius: 12px;
+  padding: 12px 20px;
+  backdrop-filter: blur(8px);
+  min-width: 140px;
+}
+
+.fps-hud-card.red-bar {
+  border-left-color: #ff0055;
+}
+
+.fps-hud-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.fps-hud-val {
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.fps-hud-val span {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Grenades block */
+.fps-grenades-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.fps-grenade-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffaa00;
+  box-shadow: 0 0 6px rgba(255, 170, 0, 0.8);
+}
+
+.fps-grenade-dot.empty {
+  background: rgba(255, 170, 0, 0.15);
+  border: 1px solid rgba(255, 170, 0, 0.4);
+  box-shadow: none;
+}
+
+/* Ammo Widget (Bottom Right) */
+.fps-hud-right {
+  position: absolute;
+  bottom: 25px;
+  right: 25px;
+}
+
+.fps-hud-card.ammo-card {
+  border-left: none;
+  border-right: 5px solid #00ff7f;
+  text-align: right;
+  min-width: 140px;
+}
+
+.fps-hud-card.ammo-card.reloading {
+  border-right-color: #ffaa00;
+}
+
+.fps-reload-text {
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffaa00;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  animation: pulse 1s infinite alternate;
+}
+
+/* Scoreboard Overlay (Top Center) */
+.fps-hud-top {
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.fps-score-badge {
+  background: rgba(6, 4, 15, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 25px;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.fps-score-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fps-score-team.blue {
+  color: #00b0ff;
+  text-shadow: 0 0 10px rgba(0, 176, 255, 0.3);
+}
+
+.fps-score-team.red {
+  color: #ff3d00;
+  text-shadow: 0 0 10px rgba(255, 61, 0, 0.3);
+}
+
+.fps-score-team-lbl {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.fps-score-num {
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.fps-score-divider {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 300;
+}
+
+/* Bullet Feed Log (Top Right) */
+.fps-kill-feed {
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  max-width: 250px;
+}
+
+.fps-kill-log {
+  background: rgba(6, 4, 15, 0.7);
+  border-left: 3px solid #ff3d00;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.2s ease-out;
+}
+
+.fps-kill-log.local-killer {
+  border-left-color: #00ff7f;
+}
+
+/* ──────────────── DEATH OVERLAY ──────────────── */
+
+.fps-death-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 0, 50, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  animation: deathFade 0.3s forwards;
+  backdrop-filter: blur(3px);
+}
+
+.fps-death-box {
+  background: #000;
+  border: 2px solid #ff0055;
+  box-shadow: 0 0 40px rgba(255, 0, 85, 0.5);
+  padding: 35px 50px;
+  border-radius: 20px;
+  text-align: center;
+}
+
+.fps-death-box h2 {
+  font-size: 32px;
+  font-weight: 900;
+  color: #ff0055;
+  letter-spacing: 0.2em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(255, 0, 85, 0.5);
+}
+
+.fps-death-box p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.1em;
+}
+
+.fps-respawn-bar {
+  width: 120px;
+  height: 4px;
+  background: rgba(255, 0, 85, 0.2);
+  margin: 20px auto 0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.fps-respawn-progress {
+  height: 100%;
+  background: #ff0055;
+  width: 100%;
+  animation: respawnCountdown 3s linear forwards;
+}
+
+/* ──────────────── MATCH ENDED GAME OVER OVERLAY ──────────────── */
+
+.fps-gameover-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 2, 7, 0.96);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 20px;
+}
+
+.fps-gameover-box {
+  background: rgba(14, 10, 27, 0.85);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 170, 0, 0.1);
+  position: relative;
+}
+
+.fps-gameover-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ffaa00, transparent);
+}
+
+.fps-gameover-box h2 {
+  font-size: 36px;
+  font-weight: 900;
+  color: #ffaa00;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 25px;
+  text-shadow: 0 0 15px rgba(255, 170, 0, 0.3);
+}
+
+.fps-gameover-stats {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 30px;
+}
+
+.fps-stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.fps-stat-val {
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.fps-rematch-btn {
+  width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 14px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ffaa00 0%, #ff5500 100%);
+  border: none;
+  color: #000;
+  transition: all 0.25s;
+  box-shadow: 0 4px 15px rgba(255, 85, 0, 0.2);
+}
+
+.fps-rematch-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 85, 0, 0.35);
+}
+
+/* ──────────────── KEYFRAMES ANIMATIONS ──────────────── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  to { opacity: 0.5; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes deathFade {
+  from { background-color: rgba(255, 0, 50, 0); }
+  to { background-color: rgba(255, 0, 50, 0.25); }
+}
+
+@keyframes respawnCountdown {
+  from { width: 100%; }
+  to { width: 0%; }
+}

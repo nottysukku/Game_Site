@@ -1,0 +1,59 @@
+.nt-root {
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 10%, #12345c 0, #050713 56%, #03030a 100%);
+  color: #e5fbff;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.nt-canvas {
+  width: min(94vw, 1080px);
+  height: auto;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  box-shadow: 0 0 40px rgba(34, 211, 238, 0.18);
+  background: #050713;
+}
+
+.nt-panel {
+  position: fixed;
+  left: 24px;
+  top: 86px;
+  width: 280px;
+  padding: 18px;
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  background: rgba(3, 7, 18, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.nt-panel h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.nt-panel p,
+.nt-meta {
+  color: #b6d8e7;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.nt-scores {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.nt-panel button {
+  width: 100%;
+  border: 1px solid #22d3ee;
+  background: rgba(34, 211, 238, 0.15);
+  color: #e5fbff;
+  padding: 10px 12px;
+  font-weight: 900;
+  cursor: pointer;
+}

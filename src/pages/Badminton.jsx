@@ -318,9 +318,9 @@ export default function Badminton() {
         // Gravity
         this.vy += GRAVITY * 0.6; 
         
-        // Aerodynamic drag (shuttlecock has high drag)
+        // Aerodynamic drag (shuttlecock has high drag, reduced slightly for better clears)
         const speed = Math.hypot(this.vx, this.vy);
-        const drag = 0.008 * speed * speed;
+        const drag = 0.0055 * speed * speed;
         
         if (speed > 0) {
           this.vx -= (this.vx / speed) * drag;
@@ -440,30 +440,30 @@ export default function Badminton() {
           const isSmash = player.swingType === 'downstroke';
 
           if (isServeLaunch) {
-            // Perfect serve arch
-            bx = player.isPlayer2 ? -15 : 15;
-            by = -14;
+            // Perfect serve arch — high enough to clear the net easily
+            bx = player.isPlayer2 ? -29 : 29;
+            by = -21;
             spawnParticles(birdie.x, birdie.y, '#fff', 12, 4);
           } else {
             const hitAngle = Math.atan2(birdie.y - racketPos.y, birdie.x - racketPos.x);
-            let power = isSmash ? 32 : 22;
+            let power = isSmash ? 34 : 26;
 
             bx = Math.cos(hitAngle) * power + player.vx * 0.5;
             by = Math.sin(hitAngle) * power;
 
             if (isSmash) {
-               bx = player.isPlayer2 ? -28 : 28;
-               by = 16; // smash down hard
+               bx = player.isPlayer2 ? -34 : 34;
+               by = 18; // smash down hard
                screenShake = 22;
                spawnParticles(racketPos.x, racketPos.y, '#ffd166', 30, 8);
                setAnnouncement("SMASH!");
                setTimeout(() => { if (announcement === "SMASH!") setAnnouncement("") }, 1000);
             } else {
-               by = -14;
+               by = -18; // clear higher
                if (player.isPlayer2) {
-                 if (bx > -5) bx = -15;
+                 if (bx > -20) bx = -22;
                } else {
-                 if (bx < 5) bx = 15;
+                 if (bx < 20) bx = 22;
                }
             }
             spawnParticles(racketPos.x, racketPos.y, '#fff', 10, 5);

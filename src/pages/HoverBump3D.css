@@ -1,0 +1,57 @@
+.hb-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #020617 0%, #111827 55%, #3f2d12 100%);
+  color: #fff7ed;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.hb-canvas {
+  width: min(94vw, 1120px);
+  height: auto;
+  border: 1px solid rgba(250, 204, 21, 0.32);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56), 0 0 42px rgba(250, 204, 21, 0.12);
+}
+
+.hb-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 286px;
+  padding: 18px;
+  background: rgba(2, 6, 23, 0.78);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.hb-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.hb-panel p,
+.hb-points {
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.hb-points {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+  font-weight: 900;
+}
+
+.hb-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #facc15;
+  background: rgba(250, 204, 21, 0.14);
+  color: #fff7ed;
+  font-weight: 900;
+  cursor: pointer;
+}

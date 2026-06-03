@@ -1,0 +1,50 @@
+.pp-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #080812 0%, #172554 54%, #111827 100%);
+  color: #eff6ff;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.pp-canvas {
+  width: min(94vw, 1120px);
+  height: auto;
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), 0 0 42px rgba(34, 211, 238, 0.14);
+}
+
+.pp-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 278px;
+  padding: 18px;
+  background: rgba(8, 8, 18, 0.78);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.pp-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.pp-panel div,
+.pp-panel p {
+  color: #bfdbfe;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.pp-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #22d3ee;
+  background: rgba(34, 211, 238, 0.14);
+  color: #eff6ff;
+  font-weight: 900;
+  cursor: pointer;
+}

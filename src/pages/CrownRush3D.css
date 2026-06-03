@@ -1,0 +1,82 @@
+.cr-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #17200f 0%, #3f2d12 48%, #111827 100%);
+  color: #fff7ed;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.cr-canvas {
+  width: min(96vw, 1180px);
+  height: auto;
+  border: 1px solid rgba(250, 204, 21, 0.34);
+  box-shadow: 0 24px 86px rgba(0, 0, 0, 0.6), 0 0 46px rgba(250, 204, 21, 0.12);
+  cursor: crosshair;
+}
+
+.cr-menu,
+.cr-hud {
+  background: rgba(17, 24, 39, 0.82);
+  border: 1px solid rgba(250, 204, 21, 0.34);
+  backdrop-filter: blur(10px);
+  padding: 22px;
+  width: min(92vw, 420px);
+}
+
+.cr-hud {
+  position: fixed;
+  left: 24px;
+  top: 86px;
+  width: 310px;
+}
+
+.cr-menu h1,
+.cr-hud h1 {
+  margin: 0 0 10px;
+  font-size: 26px;
+  text-transform: uppercase;
+}
+
+.cr-menu p,
+.cr-hud p,
+.cr-hud div,
+.cr-menu strong {
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.cr-menu button,
+.cr-join button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #facc15;
+  background: rgba(250, 204, 21, 0.14);
+  color: #fff7ed;
+  font-weight: 900;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.cr-join {
+  display: grid;
+  grid-template-columns: 1fr 92px;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cr-join input {
+  min-width: 0;
+  border: 1px solid rgba(250, 204, 21, 0.34);
+  background: rgba(2, 6, 23, 0.76);
+  color: #fff7ed;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-weight: 900;
+}
+
+.cr-join button {
+  margin-top: 0;
+}

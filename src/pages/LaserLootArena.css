@@ -1,0 +1,49 @@
+.lla-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #020617 0%, #111827 56%, #450a0a 100%);
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.lla-canvas {
+  width: min(94vw, 1120px);
+  height: auto;
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), 0 0 40px rgba(239, 68, 68, 0.12);
+}
+
+.lla-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 278px;
+  padding: 18px;
+  background: rgba(2, 6, 23, 0.78);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.lla-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.lla-panel p {
+  color: #fecaca;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.lla-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #f87171;
+  background: rgba(248, 113, 113, 0.14);
+  color: #f8fafc;
+  font-weight: 900;
+  cursor: pointer;
+}

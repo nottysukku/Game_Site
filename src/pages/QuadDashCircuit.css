@@ -1,0 +1,49 @@
+.qdc-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #2f1f13 0%, #6b4b2b 52%, #111827 100%);
+  color: #fff7ed;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.qdc-canvas {
+  width: min(94vw, 1120px);
+  height: auto;
+  border: 1px solid rgba(253, 224, 71, 0.28);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.5);
+}
+
+.qdc-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 278px;
+  padding: 18px;
+  background: rgba(28, 18, 9, 0.78);
+  border: 1px solid rgba(253, 224, 71, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.qdc-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.qdc-panel p {
+  color: #fed7aa;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.qdc-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #facc15;
+  background: rgba(250, 204, 21, 0.16);
+  color: #fff7ed;
+  font-weight: 900;
+  cursor: pointer;
+}

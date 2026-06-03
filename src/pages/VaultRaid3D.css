@@ -1,0 +1,50 @@
+.vr-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #020617 0%, #0f172a 60%, #111827 100%);
+  color: #e2e8f0;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.vr-canvas {
+  width: min(94vw, 1080px);
+  height: auto;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), 0 0 34px rgba(74, 222, 128, 0.1);
+}
+
+.vr-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 278px;
+  padding: 18px;
+  background: rgba(2, 6, 23, 0.78);
+  border: 1px solid rgba(74, 222, 128, 0.26);
+  backdrop-filter: blur(10px);
+}
+
+.vr-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.vr-panel div,
+.vr-panel p {
+  color: #bbf7d0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.vr-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #4ade80;
+  background: rgba(74, 222, 128, 0.14);
+  color: #ecfdf5;
+  font-weight: 900;
+  cursor: pointer;
+}

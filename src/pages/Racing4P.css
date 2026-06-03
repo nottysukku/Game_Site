@@ -1,46 +1,370 @@
+/* ===== ROOT ===== */
 .r4-root {
   width: 100vw;
   min-height: 100vh;
   position: relative;
-  background-color: #06070c;
+  background-color: #090b14;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
   overflow: hidden;
   padding-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
+/* ===== CANVAS ===== */
 .r4-canvas {
   display: block;
   max-width: 95%;
   height: auto;
   border-radius: 1rem;
   box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(6,182,212,0.15);
-  border: 1px solid rgba(6, 182, 212, 0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-top: 5rem;
+  background-color: #27ae60;
 }
 
+/* ===== MENU OVERLAY ===== */
 .r4-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(6, 7, 12, 0.95);
-  z-index: 100;
-  border: 1px solid rgba(6, 182, 212, 0.25);
-  border-radius: 1.5rem;
-  box-shadow: 0 0 50px rgba(6, 182, 212, 0.15);
-  width: 500px;
-  height: 440px;
-  margin: 80px auto;
-  padding: 2rem;
+  z-index: 20;
 }
 
-.r4-overlay h1 {
-  font-size: 3rem;
-  font-weight: 900;
+.r4-menu-panel {
+  background: rgba(6, 7, 12, 0.92);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 1.5rem;
+  box-shadow: 0 0 50px rgba(6,182,212,0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  max-width: 540px;
+  width: 90%;
+  padding: 2rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.r4-tag {
+  font-size: 10px;
+  color: #22d3ee;
+  letter-spacing: 0.4em;
   text-transform: uppercase;
 }
 
-.r4-overlay p {
-  color: #a1a1aa;
-  font-size: 0.8rem;
+.r4-title {
+  font-size: 2.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #22d3ee, #fff, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 15px rgba(6,182,212,0.4));
+  margin: 0.4rem 0 0.6rem 0;
+  text-align: center;
+}
+
+.r4-subtitle {
+  font-size: 0.72rem;
+  color: #71717a;
   text-align: center;
   max-width: 90%;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  margin-bottom: 1.2rem;
+}
+
+/* ===== SETTINGS SECTION ===== */
+.r4-settings {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+
+.r4-setting-group {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 0.75rem;
+  padding: 0.8rem 1rem;
+}
+
+.r4-setting-label {
+  font-size: 10px;
+  color: #a855f7;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+/* Player count & lap count buttons row */
+.r4-btn-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.r4-option-btn {
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: 0.4rem;
+  color: #22d3ee;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.r4-option-btn:hover {
+  background: rgba(6, 182, 212, 0.18);
+  border-color: #22d3ee;
+  color: #fff;
+}
+
+.r4-option-btn.active {
+  background: rgba(6, 182, 212, 0.3);
+  border-color: #22d3ee;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+}
+
+/* Color swatches */
+.r4-swatch-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.r4-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: none;
+}
+
+.r4-swatch:hover {
+  border-color: rgba(255,255,255,0.5);
+  transform: scale(1.15);
+}
+
+.r4-swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 14px rgba(255,255,255,0.4);
+  transform: scale(1.2);
+}
+
+/* ===== CONTROLS MATRIX ===== */
+.r4-controls-box {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 0.75rem;
+  padding: 0.8rem 1rem;
+  width: 100%;
+  margin-bottom: 1.2rem;
+}
+
+.r4-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  font-size: 11px;
+  color: #a1a1aa;
+}
+
+.r4-controls-hint {
+  font-size: 9px;
+  color: #22d3ee;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.12em;
+  margin-top: 0.6rem;
+}
+
+/* ===== START BUTTON ===== */
+.r4-start-btn {
+  position: relative;
+  padding: 0.6rem 2.5rem;
+  background: transparent;
+  border: 1px solid #22d3ee;
+  border-radius: 0.4rem;
+  color: #22d3ee;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.r4-start-btn:hover {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: #67e8f9;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+/* ===== PLAYING HUD ===== */
+.r4-hud-bar {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  z-index: 20;
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.r4-leaderboard {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+}
+
+.r4-leaderboard-title {
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(6, 182, 212, 0.3);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.r4-standing-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.r4-standing-rank {
+  color: #22d3ee;
+}
+
+.r4-standing-name {
+  font-weight: 700;
+  color: #fff;
+}
+
+.r4-objective {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  color: #a855f7;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-align: right;
+  height: fit-content;
+}
+
+.r4-objective-title {
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.r4-objective-text {
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 500;
+}
+
+/* ===== GAME OVER ===== */
+.r4-gameover-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.75);
+  z-index: 30;
+}
+
+.r4-gameover-panel {
+  background: rgba(7, 7, 15, 0.95);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  text-align: center;
+  box-shadow: 0 0 50px rgba(6, 182, 212, 0.15);
+  max-width: 420px;
+  width: 90%;
+}
+
+.r4-gameover-tag {
+  font-size: 10px;
+  color: #22d3ee;
+  letter-spacing: 0.4em;
+}
+
+.r4-gameover-heading {
+  font-size: 1.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.r4-gameover-result {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: #67e8f9;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.r4-restart-btn {
+  position: relative;
+  width: 100%;
+  padding: 0.65rem 1.5rem;
+  background: transparent;
+  border: 1px solid #22d3ee;
+  border-radius: 0.4rem;
+  color: #22d3ee;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.r4-restart-btn:hover {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: #67e8f9;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
 }

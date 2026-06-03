@@ -36,21 +36,21 @@ const games = [
   { path: '/reversi', icon: '⚫', title: 'Reversi', desc: 'Othello board game vs AI', color: '#69f0ae' },
   { path: '/doodlejump', icon: '🦘', title: 'Doodle Jump', desc: 'Endless vertical platformer', color: '#b9f6ca' },
   { path: '/reactiontest', icon: '⚡', title: 'Reaction Time', desc: 'Test your reflexes', color: '#ffd740' },
-  { path: '/gravityguyrush', icon: '🧲', title: 'Gravity Guy Rush 2D', desc: '1-4P side-view gravity flip race', color: '#7dd3fc' },
+  { path: '/gravityguyrush', icon: '🧲', title: 'Gravity Guy Rush 2D', desc: 'Shared-path elimination gravity run', color: '#7dd3fc' },
   { path: '/pockettanks3d', icon: '💥', title: 'Pocket Tanks 3D', desc: '3-4P turn-based artillery', color: '#ffb74d' },
-  { path: '/neontagarena', icon: '👑', title: 'Neon Tag Arena', desc: '3-4P crown tag battle', color: '#4dd0e1' },
-  { path: '/crystalcometclash', icon: '💎', title: 'Crystal Comet Clash', desc: '3-4P crystal collection brawl', color: '#f48fb1' },
-  { path: '/bombrelay3d', icon: '💣', title: 'Bomb Relay 3D', desc: '3-4P hot-potato bomb relay', color: '#ff8a65' },
-  { path: '/zonecontrol3d', icon: '⭕', title: 'Zone Control 3D', desc: '3-4P moving capture zone', color: '#80cbc4' },
-  { path: '/meteormayhem3d', icon: '☄️', title: 'Meteor Mayhem 3D', desc: '3-4P survival storm', color: '#b39ddb' },
-  { path: '/quaddashcircuit', icon: '🏁', title: 'Quad Dash Circuit', desc: '3-4P checkpoint race', color: '#a5d6a7' },
-  { path: '/laserlootarena', icon: '🔋', title: 'Laser Loot Arena', desc: '3-4P core loot arena', color: '#90caf9' },
-  { path: '/crownrush3d', icon: '🛡️', title: 'Crown Rush 3D', desc: '3-4P high-speed tag', color: '#ef9a9a' },
-  { path: '/orbharvest3d', icon: '🟢', title: 'Orb Harvest 3D', desc: '3-4P orb farming duel', color: '#81c784' },
-  { path: '/hoverbump3d', icon: '🚧', title: 'Hover Bump 3D', desc: '3-4P bump-and-hold arena', color: '#ffab91' },
-  { path: '/pulsepit3d', icon: '⚙️', title: 'Pulse Pit 3D', desc: '3-4P pulse bomb chaos', color: '#ce93d8' },
-  { path: '/turbototem3d', icon: '🗿', title: 'Turbo Totem 3D', desc: '3-4P totem checkpoint sprint', color: '#ffe082' },
-  { path: '/vaultraid3d', icon: '🏦', title: 'Vault Raid 3D', desc: '3-4P high-value orb raid', color: '#80deea' },
+  { path: '/neontagarena', icon: '👑', title: 'Neon Tag Arena', desc: '4P neon maze tag chase', color: '#4dd0e1' },
+  { path: '/crystalcometclash', icon: '💎', title: 'Crystal Comet Clash', desc: 'Solo jetpack comet runner', color: '#f48fb1' },
+  { path: '/bombrelay3d', icon: '💣', title: 'Bomb Relay 3D', desc: '4P destructible hot potato', color: '#ff8a65' },
+  { path: '/zonecontrol3d', icon: '⭕', title: 'Zone Control 3D', desc: '2P hex territory tactics', color: '#80cbc4' },
+  { path: '/meteormayhem3d', icon: '☄️', title: 'Meteor Mayhem 3D', desc: 'Cockpit asteroid shooter', color: '#b39ddb' },
+  { path: '/quaddashcircuit', icon: '🏁', title: 'Quad Dash Circuit', desc: '4P tabletop toy racing', color: '#a5d6a7' },
+  { path: '/laserlootarena', icon: '🔋', title: 'Laser Loot Arena', desc: '2P vault platform heist', color: '#90caf9' },
+  { path: '/crownrush3d', icon: '🛡️', title: 'Crown Rush 3D', desc: 'WebRTC crown hold FPS', color: '#ef9a9a' },
+  { path: '/orbharvest3d', icon: '🟢', title: 'Orb Harvest 3D', desc: 'Katamari-style city harvest', color: '#81c784' },
+  { path: '/hoverbump3d', icon: '🚧', title: 'Hover Bump 3D', desc: '4P shrinking-platform sumo', color: '#ffab91' },
+  { path: '/pulsepit3d', icon: '⚙️', title: 'Pulse Pit 3D', desc: 'Beat-timed pit runner', color: '#ce93d8' },
+  { path: '/turbototem3d', icon: '🗿', title: 'Turbo Totem 3D', desc: '1-2P swinging block stacker', color: '#ffe082' },
+  { path: '/vaultraid3d', icon: '🏦', title: 'Vault Raid 3D', desc: 'Top-down stealth vault raid', color: '#80deea' },
   { path: '/badminton', icon: '🏸', title: 'Badminton', desc: '1v1 Stickman local multiplayer', color: '#87CEEB' },
   { path: '/soccerheads', icon: '⚽', title: 'Soccer Heads', desc: '1v1 physics with superpowers', color: '#ff5252' },
   { path: '/racing4p', icon: '🏎️', title: '2D Racer 4P', desc: '4P Top-down grand prix with CPU drivers', color: '#00ffd4' },
@@ -89,12 +89,20 @@ export default function MainMenu() {
   // Pagination for Carousel
   const itemsPerPage = 8;
   const totalPages = Math.ceil(games.length / itemsPerPage);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(() => {
+    const saved = sessionStorage.getItem('arcade-carousel-page');
+    return saved ? Math.min(parseInt(saved, 10), totalPages - 1) : 0;
+  });
 
   const nextPage = () => setPage(p => (p + 1) % totalPages);
   const prevPage = () => setPage(p => (p - 1 + totalPages) % totalPages);
 
   const displayedGames = games.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+
+  // Persist carousel page so returning from a game restores position
+  useEffect(() => {
+    sessionStorage.setItem('arcade-carousel-page', String(page));
+  }, [page]);
 
   useEffect(() => {
     // Keep the particle background

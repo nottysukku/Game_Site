@@ -27,7 +27,7 @@
 
 .fps-lobby-box {
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   background: rgba(14, 10, 27, 0.75);
   border: 1px solid rgba(0, 229, 255, 0.2);
   border-radius: 24px;
@@ -36,6 +36,19 @@
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 229, 255, 0.05);
   text-align: center;
   position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.fps-lobby-box::-webkit-scrollbar {
+  width: 4px;
+}
+.fps-lobby-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fps-lobby-box::-webkit-scrollbar-thumb {
+  background: rgba(0, 229, 255, 0.3);
+  border-radius: 2px;
 }
 
 .fps-lobby-box::before {
@@ -67,6 +80,75 @@
   text-transform: uppercase;
   margin-bottom: 30px;
 }
+
+/* ──────────────── MODE SELECTION ──────────────── */
+
+.fps-mode-select {
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.fps-mode-select label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.fps-mode-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fps-mode-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.fps-mode-btn:hover {
+  background: rgba(0, 229, 255, 0.08);
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+.fps-mode-btn.active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: #00e5ff;
+  color: #00e5ff;
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+}
+
+.fps-mode-btn .fps-mode-icon {
+  font-size: 20px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.fps-mode-desc {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 3px;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  font-weight: 400;
+}
+
+/* ──────────────── TEAM & ACTION BUTTONS ──────────────── */
 
 .fps-team-select {
   margin-bottom: 25px;
@@ -227,6 +309,106 @@
   text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
 }
 
+/* ──────────────── COPY & SHARE BUTTONS ──────────────── */
+
+.fps-code-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.fps-copy-btn,
+.fps-share-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  background: rgba(0, 229, 255, 0.08);
+  color: #00e5ff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fps-copy-btn:hover,
+.fps-share-btn:hover {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: #00e5ff;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+}
+
+.fps-copy-btn.copied {
+  background: rgba(0, 255, 127, 0.15);
+  border-color: #00ff7f;
+  color: #00ff7f;
+}
+
+.fps-share-btn {
+  border-color: rgba(255, 0, 127, 0.3);
+  background: rgba(255, 0, 127, 0.08);
+  color: #ff007f;
+}
+
+.fps-share-btn:hover {
+  background: rgba(255, 0, 127, 0.2);
+  border-color: #ff007f;
+  box-shadow: 0 0 12px rgba(255, 0, 127, 0.2);
+}
+
+/* ──────────────── PLAYER COUNT INDICATOR ──────────────── */
+
+.fps-player-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: rgba(0, 229, 255, 0.05);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  border-radius: 12px;
+  margin-top: 5px;
+}
+
+.fps-player-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.fps-player-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.fps-player-dot.filled {
+  box-shadow: 0 0 8px currentColor;
+}
+
+.fps-player-dot.empty {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.fps-player-count-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #00e5ff;
+  letter-spacing: 0.05em;
+}
+
+.fps-player-count-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .fps-spinner {
   width: 40px;
   height: 40px;
@@ -258,6 +440,352 @@
   margin-top: 15px;
   font-weight: 600;
   letter-spacing: 0.05em;
+}
+
+/* ──────────────── TRAINING ROOM HINT OVERLAY ──────────────── */
+
+.fps-training-hint {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6, 4, 15, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: 12px;
+  padding: 12px 24px;
+  backdrop-filter: blur(8px);
+  z-index: 15;
+  pointer-events: none;
+  text-align: center;
+  animation: trainingPulse 2s infinite;
+}
+
+.fps-training-hint-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #00e5ff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.fps-training-hint-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.05em;
+}
+
+.fps-training-hint-text strong {
+  color: #ffaa00;
+}
+
+.fps-training-stats {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6, 4, 15, 0.8);
+  border: 1px solid rgba(255, 170, 0, 0.2);
+  border-radius: 10px;
+  padding: 8px 20px;
+  backdrop-filter: blur(6px);
+  z-index: 15;
+  pointer-events: none;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.fps-training-stat {
+  text-align: center;
+}
+
+.fps-training-stat-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+}
+
+.fps-training-stat-val {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffaa00;
+}
+
+/* ──────────────── COUNTDOWN TIMER DISPLAY ──────────────── */
+
+.fps-countdown-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding-top: 80px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.fps-countdown-box {
+  background: rgba(6, 4, 15, 0.9);
+  border: 2px solid rgba(255, 170, 0, 0.4);
+  border-radius: 16px;
+  padding: 15px 35px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 30px rgba(255, 170, 0, 0.15);
+  animation: countdownPulse 1s infinite;
+}
+
+.fps-countdown-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 170, 0, 0.7);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.fps-countdown-val {
+  font-size: 42px;
+  font-weight: 900;
+  color: #ffaa00;
+  text-shadow: 0 0 20px rgba(255, 170, 0, 0.5);
+  letter-spacing: 0.05em;
+}
+
+.fps-countdown-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
+}
+
+/* ──────────────── MATCH TIMER (Top Center) ──────────────── */
+
+.fps-match-timer {
+  position: absolute;
+  top: 65px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6, 4, 15, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 18px;
+  z-index: 12;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fps-match-timer-icon {
+  font-size: 14px;
+}
+
+.fps-match-timer-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+.fps-match-timer-val.urgent {
+  color: #ff0055;
+  animation: pulse 0.5s infinite alternate;
+}
+
+/* ──────────────── BOMB PLANT/DEFUSE PROGRESS BAR ──────────────── */
+
+.fps-bomb-progress-overlay {
+  position: absolute;
+  bottom: 140px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 18;
+  pointer-events: none;
+  text-align: center;
+}
+
+.fps-bomb-progress-label {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 6px;
+}
+
+.fps-bomb-progress-label.planting {
+  color: #ff3d00;
+}
+
+.fps-bomb-progress-label.defusing {
+  color: #00b0ff;
+}
+
+.fps-bomb-progress-bar {
+  width: 240px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.fps-bomb-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.fps-bomb-progress-fill.planting {
+  background: linear-gradient(90deg, #ff3d00, #ff7700);
+  box-shadow: 0 0 10px rgba(255, 61, 0, 0.5);
+}
+
+.fps-bomb-progress-fill.defusing {
+  background: linear-gradient(90deg, #00b0ff, #00e5ff);
+  box-shadow: 0 0 10px rgba(0, 176, 255, 0.5);
+}
+
+.fps-bomb-status {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 61, 0, 0.15);
+  border: 1px solid rgba(255, 61, 0, 0.4);
+  border-radius: 10px;
+  padding: 8px 20px;
+  z-index: 14;
+  pointer-events: none;
+  animation: bombTick 1s infinite;
+}
+
+.fps-bomb-status-text {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ff3d00;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ──────────────── ZOMBIE WAVE COUNTER ──────────────── */
+
+.fps-zombie-hud {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6, 4, 15, 0.85);
+  border: 1px solid rgba(0, 255, 127, 0.25);
+  border-radius: 12px;
+  padding: 10px 25px;
+  backdrop-filter: blur(8px);
+  z-index: 14;
+  pointer-events: none;
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+.fps-zombie-stat {
+  text-align: center;
+}
+
+.fps-zombie-stat-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+}
+
+.fps-zombie-stat-val {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.fps-zombie-stat-val.wave {
+  color: #00ff7f;
+  text-shadow: 0 0 10px rgba(0, 255, 127, 0.4);
+}
+
+.fps-zombie-stat-val.alive {
+  color: #ff3d00;
+}
+
+.fps-zombie-stat-val.lives {
+  color: #ffaa00;
+}
+
+.fps-zombie-intermission {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(6, 4, 15, 0.92);
+  border: 2px solid rgba(0, 255, 127, 0.3);
+  border-radius: 20px;
+  padding: 30px 50px;
+  z-index: 25;
+  pointer-events: none;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.fps-zombie-intermission h2 {
+  font-size: 28px;
+  font-weight: 900;
+  color: #00ff7f;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+  text-shadow: 0 0 15px rgba(0, 255, 127, 0.4);
+}
+
+.fps-zombie-intermission p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.fps-zombie-intermission .fps-countdown-val {
+  color: #00ff7f;
+  text-shadow: 0 0 20px rgba(0, 255, 127, 0.5);
+}
+
+/* ──────────────── ROUND INFO (Bomb Defuse) ──────────────── */
+
+.fps-round-info {
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 14;
+  pointer-events: none;
+}
+
+.fps-round-badge {
+  background: rgba(6, 4, 15, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 8px 16px;
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.fps-round-badge strong {
+  color: #ffaa00;
+  font-size: 14px;
 }
 
 /* ──────────────── INTRO LOCK SCREEN OVERLAY ──────────────── */
@@ -715,6 +1243,22 @@
   box-shadow: 0 6px 20px rgba(255, 85, 0, 0.35);
 }
 
+/* ──────────────── PLAYER NAME TAGS (Multiplayer) ──────────────── */
+
+.fps-nametag {
+  position: absolute;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 5;
+}
+
 /* ──────────────── KEYFRAMES ANIMATIONS ──────────────── */
 
 @keyframes spin {
@@ -738,4 +1282,428 @@
 @keyframes respawnCountdown {
   from { width: 100%; }
   to { width: 0%; }
+}
+
+@keyframes trainingPulse {
+  0%, 100% { opacity: 1; border-color: rgba(0, 229, 255, 0.25); }
+  50% { opacity: 0.8; border-color: rgba(0, 229, 255, 0.5); }
+}
+
+@keyframes countdownPulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(255, 170, 0, 0.15); }
+  50% { box-shadow: 0 0 50px rgba(255, 170, 0, 0.3); }
+}
+
+@keyframes bombTick {
+  0%, 100% { border-color: rgba(255, 61, 0, 0.4); }
+  50% { border-color: rgba(255, 61, 0, 0.8); box-shadow: 0 0 20px rgba(255, 61, 0, 0.3); }
+}
+
+/* Custom CSS additions */
+.fps-hud-room-code {
+  position: absolute;
+  top: 80px;
+  left: 25px;
+  z-index: 15;
+  background: rgba(6, 4, 15, 0.7);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  padding: 8px 15px;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.fps-hud-code-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(0, 229, 255, 0.6);
+  letter-spacing: 0.05em;
+}
+
+.fps-hud-code-val {
+  font-size: 16px;
+  font-weight: 900;
+  color: #00e5ff;
+  letter-spacing: 0.1em;
+}
+
+.fps-copy-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 10px;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  background: rgba(0, 229, 255, 0.1);
+  color: #00e5ff;
+}
+
+.fps-copy-btn:hover {
+  background: rgba(0, 229, 255, 0.25);
+  border-color: #00e5ff;
+}
+
+.fps-copy-btn.copied {
+  background: rgba(0, 255, 127, 0.2);
+  border-color: #00ff7f;
+  color: #00ff7f;
+}
+
+.fps-start-bots-btn {
+  margin-top: 15px;
+  padding: 10px 20px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #000;
+  background: #ffaa00;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.2s;
+  pointer-events: auto;
+}
+
+.fps-start-bots-btn:hover {
+  background: #ffc44d;
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
+}
+
+.fps-match-go-banner {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 25;
+  background: linear-gradient(90deg, rgba(255, 0, 127, 0.9) 0%, rgba(255, 85, 0, 0.9) 100%);
+  padding: 20px 60px;
+  border-radius: 12px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 40px rgba(255, 0, 85, 0.6);
+  text-align: center;
+  animation: bannerPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  pointer-events: none;
+}
+
+.fps-match-go-banner h1 {
+  font-size: 48px;
+  font-weight: 900;
+  color: #fff;
+  margin: 0;
+  letter-spacing: 0.15em;
+  text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  text-transform: uppercase;
+}
+
+@keyframes bannerPop {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.fps-hud-leaderboard {
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  z-index: 12;
+  background: rgba(6, 4, 15, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 12px 18px;
+  backdrop-filter: blur(8px);
+  width: 200px;
+}
+
+.fps-leaderboard-title {
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+.fps-leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  margin: 4px 0;
+  color: #ccc;
+}
+
+.fps-leaderboard-row.active-player {
+  color: #00e5ff;
+}
+
+.fps-leaderboard-row.active-remote {
+  color: #ff3d00;
+}
+
+/* Sniper scope HUD */
+.fps-scope-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 35%, rgba(0,0,0,0.95) 45%);
+}
+
+.fps-scope-vignette {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  pointer-events: none;
+}
+
+.fps-scope-crosshair-h {
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  background: rgba(0, 229, 255, 0.65);
+}
+
+.fps-scope-crosshair-v {
+  position: absolute;
+  height: 100%;
+  width: 1px;
+  background: rgba(0, 229, 255, 0.65);
+}
+
+.fps-scope-circle {
+  width: 38vw;
+  height: 38vw;
+  border-radius: 50%;
+  border: 2px solid #00e5ff;
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.3), inset 0 0 30px rgba(0, 229, 255, 0.3);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Minimap styling */
+.fps-minimap-container {
+  position: absolute;
+  top: 25px;
+  left: 200px; /* offset from exit button */
+  width: 130px;
+  height: 130px;
+  z-index: 12;
+  border-radius: 50%;
+  background: rgba(6, 4, 15, 0.8);
+  border: 2px solid #00e5ff;
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+}
+
+.fps-minimap-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Loadout Selector Panel */
+.fps-loadout-panel {
+  margin-top: 15px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.fps-loadout-panel label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.fps-loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.fps-loadout-card {
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.fps-loadout-card:hover {
+  background: rgba(0, 229, 255, 0.05);
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+.fps-loadout-card.active {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: #00e5ff;
+  color: #00e5ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+}
+
+.fps-loadout-card-name {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fps-loadout-card-desc {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
+}
+
+/* Zombie Wave Indicators */
+.fps-zombie-banner {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: rgba(14, 5, 5, 0.85);
+  border: 1px solid #ff3300;
+  padding: 8px 24px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 0 25px rgba(255, 51, 0, 0.3);
+  animation: bannerPop 0.4s ease-out;
+}
+
+.fps-zombie-banner h3 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.15em;
+  color: #ff3300;
+  text-transform: uppercase;
+}
+
+.fps-zombie-count-badge {
+  position: absolute;
+  top: 90px;
+  right: 25px;
+  z-index: 12;
+  background: rgba(6, 4, 15, 0.7);
+  border: 1px solid rgba(255, 51, 0, 0.4);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ff3300;
+}
+
+/* Boss Health Bar */
+.fps-boss-bar-container {
+  position: absolute;
+  top: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: 320px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 51, 0, 0.5);
+  border-radius: 4px;
+  overflow: hidden;
+  padding: 2px;
+}
+
+.fps-boss-bar-fill {
+  height: 8px;
+  background: linear-gradient(90deg, #ff3300, #ff7700);
+  width: 100%;
+  transition: width 0.1s ease-out;
+}
+
+.fps-boss-label {
+  text-align: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: #ff3300;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Bomb Planting/Defusing Progress HUD */
+.fps-progress-overlay {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  text-align: center;
+  background: rgba(6, 4, 15, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  padding: 10px 20px;
+  border-radius: 12px;
+  width: 260px;
+}
+
+.fps-progress-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #00e5ff;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.fps-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.fps-progress-fill {
+  height: 100%;
+  background: #00e5ff;
+  width: 0%;
+}
+
+.fps-bomb-alert {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: rgba(14, 5, 5, 0.85);
+  border: 1px solid #ff3d00;
+  padding: 12px 30px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 0 25px rgba(255, 61, 0, 0.3);
+  animation: bannerPop 0.4s ease-out;
+}
+
+.fps-bomb-alert h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #ff3d00;
+  letter-spacing: 0.1em;
+}
+
+.fps-bomb-alert-timer {
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  margin-top: 5px;
 }

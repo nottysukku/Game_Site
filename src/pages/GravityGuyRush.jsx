@@ -8,7 +8,6 @@ const PLAYER_LABELS = ['P1', 'P2', 'P3', 'P4'];
 const ACTION_KEYS = ['KeyQ', 'KeyU', 'KeyR', 'Slash'];
 const ACTION_LABELS = ['P1 Q', 'P2 U', 'P3 R', 'P4 /'];
 
-const ROUND_DURATION = 80;
 const BASE_SPEED = 10.2;
 const MAX_SPEED = 24;
 const SPEED_RAMP = 0.23;
@@ -16,6 +15,9 @@ const PLAYER_X = -11.2;
 const SPAWN_X = 25;
 const OFFSCREEN_X = -28;
 const WORLD_HEIGHT = 18;
+const SHARED_SURFACE_OFFSET = 6.25;
+const TROOPER_START_X = -18.2;
+const TROOPER_CATCH_X = PLAYER_X - 0.82;
 const FLIP_DURATION = 0.22;
 const PLAYER_HALF_WIDTH = 0.58;
 const DEFAULT_OBS_HALF_WIDTH = 0.62;
@@ -72,23 +74,17 @@ function cubicEaseInOut(t) {
 }
 
 function laneLayout(count) {
-  const laneBand = WORLD_HEIGHT / count;
-  const top = WORLD_HEIGHT / 2;
-  const centers = [];
-  for (let i = 0; i < count; i += 1) {
-    centers.push(top - laneBand * (i + 0.5));
-  }
   return {
     worldHeight: WORLD_HEIGHT,
-    laneBand,
-    centers,
-    stripHeight: laneBand * 0.92,
-    sideOffset: clamp(laneBand * 0.3, 1.08, 2.45),
+    laneBand: WORLD_HEIGHT,
+    centers: Array(count).fill(0),
+    stripHeight: WORLD_HEIGHT * 0.76,
+    sideOffset: SHARED_SURFACE_OFFSET,
   };
 }
 
-function laneCenter(layout, lane) {
-  return layout.centers[lane] ?? 0;
+function laneCenter() {
+  return 0;
 }
 
 function sideY(layout, lane, side) {
@@ -175,6 +171,54 @@ function createRunner(color) {
       rightArmPivot,
     },
   };
+}
+
+function createTrooper() {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0xb91c1c,
+    emissive: 0x5f0f1a,
+    emissiveIntensity: 0.55,
+    roughness: 0.36,
+    metalness: 0.35,
+  });
+  const darkMat = new THREE.MeshStandardMaterial({
+    color: 0x111827,
+    emissive: 0x7f1d1d,
+    emissiveIntensity: 0.3,
+    roughness: 0.42,
+  });
+
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.92, 0.72), bodyMat);
+  torso.castShadow = true;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.46, 0.52), bodyMat);
+  head.position.set(0.48, 0.48, 0.02);
+  const visor = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 0.18, 0.56),
+    new THREE.MeshBasicMaterial({ color: 0xffd5d5 })
+  );
+  visor.position.set(0.62, 0.49, 0.05);
+
+  const leftBoot = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.7, 0.24), darkMat);
+  const rightBoot = leftBoot.clone();
+  leftBoot.position.set(-0.26, -0.68, 0.02);
+  rightBoot.position.set(0.28, -0.68, 0.02);
+
+  const baton = new THREE.Mesh(
+    new THREE.BoxGeometry(0.14, 0.18, 1.35),
+    new THREE.MeshBasicMaterial({ color: 0xff3b3b })
+  );
+  baton.position.set(-0.68, 0.04, 0.22);
+  baton.rotation.z = 0.24;
+
+  const warning = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.1, 0.14),
+    new THREE.MeshBasicMaterial({ color: 0xff1f55 })
+  );
+  warning.position.set(-0.82, 0.02, -0.1);
+
+  group.add(torso, head, visor, leftBoot, rightBoot, baton, warning);
+  return { group, warning };
 }
 
 function obstacleTypeForTime(elapsed) {
@@ -401,10 +445,10 @@ export default function GravityGuyRush() {
 
   const [phase, setPhase] = useState('menu');
   const [playerCount, setPlayerCount] = useState(4);
-  const [timeLeft, setTimeLeft] = useState(ROUND_DURATION);
+  const [timeLeft, setTimeLeft] = useState(4);
   const [scores, setScores] = useState([0, 0, 0, 0]);
   const [speed, setSpeed] = useState(BASE_SPEED);
-  const [status, setStatus] = useState('Flip gravity to dodge blockers in your lane.');
+  const [status, setStatus] = useState('All runners share one path. Last runner standing wins.');
 
   useEffect(() => {
     const onKeyDown = e => {
@@ -465,63 +509,51 @@ export default function GravityGuyRush() {
     const layout = laneLayout(count);
 
     const laneLength = 74;
-    for (let i = 0; i < count; i += 1) {
-      const y = laneCenter(layout, i);
+    const laneStrip = new THREE.Mesh(
+      new THREE.BoxGeometry(laneLength, layout.stripHeight, 0.12),
+      new THREE.MeshBasicMaterial({ color: 0x0d1528 })
+    );
+    laneStrip.position.set(0, 0, -0.2);
 
-      const laneStrip = new THREE.Mesh(
-        new THREE.BoxGeometry(laneLength, layout.stripHeight, 0.12),
-        new THREE.MeshBasicMaterial({ color: 0x0d1528 })
-      );
-      laneStrip.position.set(0, y, -0.2);
+    const floorRail = new THREE.Mesh(
+      new THREE.BoxGeometry(laneLength, 0.24, 0.2),
+      new THREE.MeshBasicMaterial({ color: 0x7ec6ff })
+    );
+    floorRail.position.set(0, -layout.sideOffset, -0.1);
 
-      const floorRail = new THREE.Mesh(
-        new THREE.BoxGeometry(laneLength, 0.22, 0.2),
-        new THREE.MeshBasicMaterial({ color: 0x7ec6ff })
-      );
-      floorRail.position.set(0, y - layout.sideOffset, -0.1);
+    const ceilingRail = new THREE.Mesh(
+      new THREE.BoxGeometry(laneLength, 0.24, 0.2),
+      new THREE.MeshBasicMaterial({ color: 0xff9fc7 })
+    );
+    ceilingRail.position.set(0, layout.sideOffset, -0.1);
 
-      const ceilingRail = new THREE.Mesh(
-        new THREE.BoxGeometry(laneLength, 0.22, 0.2),
-        new THREE.MeshBasicMaterial({ color: 0xff9fc7 })
-      );
-      ceilingRail.position.set(0, y + layout.sideOffset, -0.1);
+    const centerGlow = new THREE.Mesh(
+      new THREE.BoxGeometry(laneLength, 0.05, 0.12),
+      new THREE.MeshBasicMaterial({ color: 0x1f3256 })
+    );
+    centerGlow.position.set(0, 0, -0.09);
 
-      const centerGlow = new THREE.Mesh(
-        new THREE.BoxGeometry(laneLength, 0.05, 0.12),
-        new THREE.MeshBasicMaterial({ color: 0x1f3256 })
-      );
-      centerGlow.position.set(0, y, -0.09);
-
-      scene.add(laneStrip, floorRail, ceilingRail, centerGlow);
-
-      if (i < count - 1) {
-        const dividerY = (laneCenter(layout, i) + laneCenter(layout, i + 1)) / 2;
-        const divider = new THREE.Mesh(
-          new THREE.BoxGeometry(laneLength, 0.08, 0.08),
-          new THREE.MeshBasicMaterial({ color: 0x2a3550 })
-        );
-        divider.position.set(0, dividerY, -0.26);
-        scene.add(divider);
-      }
-    }
+    scene.add(laneStrip, floorRail, ceilingRail, centerGlow);
 
     const scenery = buildScenery(scene, layout);
 
     const players = [];
     for (let i = 0; i < count; i += 1) {
       const runner = createRunner(PLAYER_COLORS[i]);
-      const y = sideY(layout, i, 'floor');
-      runner.group.position.set(PLAYER_X, y, 0.45);
+      const y = sideY(layout, 0, 'floor');
+      const visualOffset = (i - (count - 1) / 2) * 0.18;
+      runner.group.position.set(PLAYER_X, y + visualOffset, 0.45 + i * 0.035);
       scene.add(runner.group);
 
       players.push({
         index: i,
         mesh: runner.group,
         parts: runner.parts,
-        lane: i,
+        lane: 0,
         side: 'floor',
         y,
         targetY: y,
+        visualOffset,
         alive: true,
         flipCooldown: 0,
         flipClock: 0,
@@ -534,6 +566,10 @@ export default function GravityGuyRush() {
       });
     }
 
+    const trooper = createTrooper();
+    trooper.group.position.set(TROOPER_START_X, sideY(layout, 0, 'floor'), 0.62);
+    scene.add(trooper.group);
+
     const engine = {
       scene,
       camera,
@@ -541,12 +577,14 @@ export default function GravityGuyRush() {
       layout,
       scenery,
       players,
+      trooper,
+      trooperX: TROOPER_START_X,
       obstacles: [],
       pendingSpawns: [],
       elapsed: 0,
       speed: BASE_SPEED,
       spawnClock: 0.9,
-      laneCount: count,
+      laneCount: 1,
       playerCount: count,
       scoresRef: [0, 0, 0, 0],
       lastTime: 0,
@@ -589,9 +627,9 @@ export default function GravityGuyRush() {
     return engine;
   }
 
-  function canSpawnInLane(engine, lane) {
+  function canSpawnInLane(engine) {
     return !engine.obstacles.some(
-      obstacle => obstacle.lane === lane && obstacle.mesh.position.x > SPAWN_X - OBSTACLE_CLEARANCE_X
+      obstacle => obstacle.mesh.position.x > SPAWN_X - OBSTACLE_CLEARANCE_X
     );
   }
 
@@ -606,32 +644,26 @@ export default function GravityGuyRush() {
   }
 
   function scheduleObstaclePattern(engine) {
-    const lane = Math.floor(Math.random() * engine.laneCount);
     const side = Math.random() > 0.5 ? 'floor' : 'ceiling';
     const typeKey = obstacleTypeForTime(engine.elapsed);
-    enqueueSpawn(engine, 0, lane, side, typeKey);
+    enqueueSpawn(engine, 0, 0, side, typeKey);
 
     if (engine.elapsed > 8 && Math.random() < 0.45) {
-      enqueueSpawn(engine, 0.34, lane, side === 'floor' ? 'ceiling' : 'floor', obstacleTypeForTime(engine.elapsed));
+      enqueueSpawn(engine, 0.34, 0, side === 'floor' ? 'ceiling' : 'floor', obstacleTypeForTime(engine.elapsed));
     }
 
-    if (engine.elapsed > 14 && engine.laneCount > 1 && Math.random() < 0.42) {
-      const lane2 = (lane + 1 + Math.floor(Math.random() * (engine.laneCount - 1))) % engine.laneCount;
-      enqueueSpawn(engine, 0.14, lane2, Math.random() > 0.5 ? 'floor' : 'ceiling', obstacleTypeForTime(engine.elapsed + 4));
+    if (engine.elapsed > 16 && Math.random() < 0.34) {
+      enqueueSpawn(engine, 0.72, 0, Math.random() > 0.5 ? 'floor' : 'ceiling', obstacleTypeForTime(engine.elapsed + 4));
     }
 
-    if (engine.elapsed > 24 && engine.laneCount > 2 && Math.random() < 0.28) {
-      for (let i = 0; i < engine.laneCount; i += 1) {
-        const delay = i * 0.11;
-        const waveSide = (i + Math.floor(engine.elapsed)) % 2 === 0 ? 'floor' : 'ceiling';
-        enqueueSpawn(engine, delay, i, waveSide, obstacleTypeForTime(engine.elapsed + 6));
-      }
+    if (engine.elapsed > 28 && Math.random() < 0.26) {
+      enqueueSpawn(engine, 0.12, 0, side === 'floor' ? 'ceiling' : 'floor', 'wall');
     }
   }
 
   function spawnObstacleNow(engine, lane, side, typeKey) {
     const obstacle = createObstacleMesh(typeKey, side);
-    obstacle.mesh.position.set(SPAWN_X, sideY(engine.layout, lane, side), 0.58);
+    obstacle.mesh.position.set(SPAWN_X, sideY(engine.layout, 0, side), 0.58);
     engine.scene.add(obstacle.mesh);
     engine.obstacles.push({
       lane,
@@ -655,8 +687,18 @@ export default function GravityGuyRush() {
 
     engine.over = true;
     engine.active = false;
+    const alivePlayers = engine.players
+      .slice(0, engine.playerCount)
+      .filter(player => player.alive)
+      .map(player => player.index);
     setPhase('over');
-    setStatus(`Final: ${scoreLine(engine.scoresRef, engine.playerCount)}`);
+    if (engine.playerCount === 1) {
+      setStatus(alivePlayers.length ? 'You outran the Gravity Trooper.' : 'The Gravity Trooper caught the runner.');
+    } else if (alivePlayers.length === 1) {
+      setStatus(`${PLAYER_LABELS[alivePlayers[0]]} wins as the last runner standing.`);
+    } else {
+      setStatus('No runners survived the shared path.');
+    }
   }
 
   function animateFrame(timestamp) {
@@ -712,9 +754,10 @@ export default function GravityGuyRush() {
       if (!player || !player.alive) continue;
 
       const actionCode = ACTION_KEYS[i];
-      if (keysRef.current[actionCode] && !latchRef.current[actionCode] && player.flipCooldown <= 0) {
+      const onSurface = player.flipClock <= 0 && Math.abs(player.y - player.targetY) < 0.08;
+      if (keysRef.current[actionCode] && !latchRef.current[actionCode] && player.flipCooldown <= 0 && onSurface) {
         player.side = player.side === 'floor' ? 'ceiling' : 'floor';
-        player.targetY = sideY(engine.layout, player.lane, player.side);
+        player.targetY = sideY(engine.layout, 0, player.side);
         player.flipCooldown = 0.12;
         player.flipClock = FLIP_DURATION;
         player.flipFromY = player.y;
@@ -750,10 +793,29 @@ export default function GravityGuyRush() {
       player.parts.trail.scale.x = 0.9 + Math.sin(player.runClock * 1.7) * 0.1;
 
       const bob = player.flipClock > 0 ? 0 : Math.sin(player.runClock * 2) * 0.07;
-      player.mesh.position.y = player.y + bob;
+      player.mesh.position.y = player.y + player.visualOffset + bob;
+      engine.scoresRef[i] = player.alive ? 1 : 0;
+    }
 
-      player.score += dt * (5.3 + (engine.speed - BASE_SPEED) * 1.08);
-      engine.scoresRef[i] = player.score;
+    const deadCount = engine.players.slice(0, engine.playerCount).filter(player => !player.alive).length;
+    engine.trooperX = Math.min(
+      TROOPER_CATCH_X,
+      engine.trooperX + dt * (0.055 + engine.elapsed * 0.006 + deadCount * 0.014)
+    );
+    engine.trooper.group.position.x = engine.trooperX;
+    engine.trooper.group.position.y = sideY(engine.layout, 0, 'floor') + Math.sin(engine.elapsed * 8) * 0.08;
+    engine.trooper.warning.scale.x = 0.85 + Math.sin(engine.elapsed * 10) * 0.15;
+
+    if (engine.trooperX >= TROOPER_CATCH_X - 0.02) {
+      for (let p = 0; p < engine.playerCount; p += 1) {
+        const player = engine.players[p];
+        if (player?.alive) {
+          player.alive = false;
+          player.mesh.visible = false;
+          engine.scoresRef[p] = 0;
+        }
+      }
+      setStatus('The Gravity Trooper swept the path.');
     }
 
     for (let i = engine.obstacles.length - 1; i >= 0; i -= 1) {
@@ -763,26 +825,23 @@ export default function GravityGuyRush() {
 
       for (let p = 0; p < engine.playerCount; p += 1) {
         const player = engine.players[p];
-        if (!player?.alive || player.lane !== obstacle.lane) continue;
+        if (!player?.alive) continue;
 
         const closeX = Math.abs(player.mesh.position.x - obstacle.mesh.position.x) < PLAYER_HALF_WIDTH + (obstacle.halfWidth || DEFAULT_OBS_HALF_WIDTH);
-        const closeY = Math.abs(player.mesh.position.y - obstacle.mesh.position.y) < 0.34 + (obstacle.halfHeight || DEFAULT_OBS_HALF_HEIGHT);
+        const closeY = Math.abs(player.y - obstacle.mesh.position.y) < 0.34 + (obstacle.halfHeight || DEFAULT_OBS_HALF_HEIGHT);
         if (closeX && closeY) {
           player.alive = false;
           player.mesh.visible = false;
+          engine.scoresRef[p] = 0;
           setStatus(`${PLAYER_LABELS[p]} crashed.`);
         }
       }
 
       if (!obstacle.passed && obstacle.mesh.position.x < PLAYER_X - 1) {
         obstacle.passed = true;
-        for (let p = 0; p < engine.playerCount; p += 1) {
-          const player = engine.players[p];
-          if (player?.alive) {
-            player.score += obstacle.passBonus || 2.8;
-            engine.scoresRef[p] = player.score;
-          }
-        }
+        engine.players.forEach((player, index) => {
+          engine.scoresRef[index] = player?.alive ? 1 : 0;
+        });
       }
 
       if (obstacle.mesh.position.x < OFFSCREEN_X) {
@@ -792,16 +851,15 @@ export default function GravityGuyRush() {
     }
 
     const aliveCount = engine.players.slice(0, engine.playerCount).filter(player => player.alive).length;
-    const remaining = Math.max(0, ROUND_DURATION - engine.elapsed);
 
-    setTimeLeft(remaining);
+    setTimeLeft(aliveCount);
     setScores([...engine.scoresRef]);
     setSpeed(engine.speed);
 
     engine.renderer.render(engine.scene, engine.camera);
 
     const knockout = engine.playerCount === 1 ? aliveCount === 0 : aliveCount <= 1;
-    if (knockout || remaining <= 0) {
+    if (knockout) {
       endRound(engine);
       return;
     }
@@ -815,10 +873,10 @@ export default function GravityGuyRush() {
 
     latchRef.current = {};
     setPhase('playing');
-    setTimeLeft(ROUND_DURATION);
-    setScores([0, 0, 0, 0]);
+    setTimeLeft(playerCount);
+    setScores([1, 1, 1, 1]);
     setSpeed(BASE_SPEED);
-    setStatus('Race live. Build speed, time flips, and survive the obstacle waves.');
+    setStatus('Race live. Flip only on a surface, dodge shared blockers, and outrun the trooper.');
 
     engine.animFrame = requestAnimationFrame(animateFrame);
   }
@@ -830,10 +888,10 @@ export default function GravityGuyRush() {
     }
 
     setPhase('menu');
-    setTimeLeft(ROUND_DURATION);
+    setTimeLeft(playerCount);
     setScores([0, 0, 0, 0]);
     setSpeed(BASE_SPEED);
-    setStatus('Flip gravity to dodge blockers in your lane.');
+    setStatus('All runners share one path. Last runner standing wins.');
   }
 
   return (
@@ -844,7 +902,7 @@ export default function GravityGuyRush() {
         <div className="m3-overlay">
           <h1>Gravity Guy Rush 2D</h1>
           <p>Side-view gravity flip race for 1-4 players on one keyboard.</p>
-          <p>Each lane is equally spaced. Runners animate, flip, and race through obstacle waves.</p>
+          <p>Everyone runs on the same floor and ceiling path. Crash or get caught and you are out.</p>
           <div className="m3-player-count">
             <span>Players:</span>
             <button className={playerCount === 1 ? 'active' : ''} onClick={() => setPlayerCount(1)}>1</button>
@@ -857,18 +915,18 @@ export default function GravityGuyRush() {
               <span key={label}>{label} flip gravity</span>
             ))}
           </div>
-          <button className="m3-main-btn" onClick={startGame}>Start Gravity Race</button>
+          <button className="m3-main-btn" onClick={startGame}>Start Elimination Run</button>
         </div>
       )}
 
       {phase === 'playing' && (
         <div className="m3-hud">
-          <div className="m3-time">Time: {Math.ceil(timeLeft)} | Speed: {speed.toFixed(1)}</div>
+          <div className="m3-time">Alive: {timeLeft}/{playerCount} | Speed: {speed.toFixed(1)}</div>
           <div className="m3-score-row">
             {scores.slice(0, playerCount).map((score, index) => (
               <div key={PLAYER_LABELS[index]} className="m3-score-card">
                 <span>{PLAYER_LABELS[index]}</span>
-                <strong>{Math.round(score)}</strong>
+                <strong>{score ? 'ALIVE' : 'OUT'}</strong>
               </div>
             ))}
           </div>
@@ -881,7 +939,7 @@ export default function GravityGuyRush() {
         <div className="m3-overlay">
           <h2>Race Complete</h2>
           <p>{status}</p>
-          <p>Inspired by classic gravity-flip runners with custom original assets.</p>
+          <p>Shared path elimination with a pursuing Gravity Trooper.</p>
           <button className="m3-main-btn" onClick={startGame}>Rematch</button>
           <button className="m3-alt-btn" onClick={resetToMenu}>Main Menu</button>
         </div>

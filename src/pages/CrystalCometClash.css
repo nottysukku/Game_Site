@@ -1,0 +1,51 @@
+.ccc-root {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #050816 0%, #111827 45%, #2e1065 100%);
+  color: #eff6ff;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.ccc-canvas {
+  width: min(94vw, 1100px);
+  height: auto;
+  border: 1px solid rgba(125, 211, 252, 0.34);
+  box-shadow: 0 22px 80px rgba(0, 0, 0, 0.46), 0 0 48px rgba(125, 211, 252, 0.16);
+}
+
+.ccc-hud {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 290px;
+  padding: 18px;
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  background: rgba(3, 7, 18, 0.76);
+  backdrop-filter: blur(10px);
+}
+
+.ccc-hud h1 {
+  margin: 0 0 10px;
+  font-size: 23px;
+  text-transform: uppercase;
+}
+
+.ccc-hud p,
+.ccc-hud div {
+  color: #c7d2fe;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.ccc-hud button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #7dd3fc;
+  background: rgba(125, 211, 252, 0.15);
+  color: #f8fbff;
+  font-weight: 900;
+  cursor: pointer;
+}

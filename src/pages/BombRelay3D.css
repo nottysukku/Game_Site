@@ -1,0 +1,57 @@
+.br-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #111827 0%, #431407 56%, #020617 100%);
+  color: #fff7ed;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.br-canvas {
+  width: min(94vw, 1120px);
+  height: auto;
+  border: 1px solid rgba(251, 146, 60, 0.34);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56), 0 0 44px rgba(251, 146, 60, 0.12);
+}
+
+.br-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 286px;
+  padding: 18px;
+  background: rgba(17, 24, 39, 0.78);
+  border: 1px solid rgba(251, 146, 60, 0.32);
+  backdrop-filter: blur(10px);
+}
+
+.br-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.br-panel p,
+.br-lives {
+  color: #fed7aa;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.br-lives {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+  font-weight: 900;
+}
+
+.br-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #fb923c;
+  background: rgba(251, 146, 60, 0.14);
+  color: #fff7ed;
+  font-weight: 900;
+  cursor: pointer;
+}

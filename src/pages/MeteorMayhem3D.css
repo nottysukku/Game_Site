@@ -1,0 +1,51 @@
+.mm-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #020617 0%, #172554 50%, #312e81 100%);
+  color: #eff6ff;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.mm-canvas {
+  width: min(94vw, 1120px);
+  height: auto;
+  border: 1px solid rgba(56, 189, 248, 0.34);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56), 0 0 44px rgba(56, 189, 248, 0.12);
+  cursor: crosshair;
+}
+
+.mm-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 300px;
+  padding: 18px;
+  background: rgba(2, 6, 23, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.mm-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.mm-panel div,
+.mm-panel p {
+  color: #bfdbfe;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.mm-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #38bdf8;
+  background: rgba(56, 189, 248, 0.14);
+  color: #eff6ff;
+  font-weight: 900;
+  cursor: pointer;
+}

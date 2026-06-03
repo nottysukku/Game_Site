@@ -1,149 +1,706 @@
-import React, { useEffect, useRef, useState } from 'react';
+// src/pages/Racing.jsx
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
+import Peer from 'peerjs';
 import BackButton from './BackButton';
 import './Racing.css';
 
-// WAYPOINTS FOR RACETRACK splines (closed loop)
-const TRACK_WAYPOINTS = [
-  new THREE.Vector3(0, 0, 0),
-  new THREE.Vector3(38, 0, -22),
-  new THREE.Vector3(82, 0, 8),
-  new THREE.Vector3(112, 0, -32),
-  new THREE.Vector3(98, 0, -82),
-  new THREE.Vector3(52, 0, -112),
-  new THREE.Vector3(0, 0, -92),
-  new THREE.Vector3(-42, 0, -122),
-  new THREE.Vector3(-88, 0, -82),
-  new THREE.Vector3(-72, 0, -32),
-  new THREE.Vector3(-42, 0, -12),
-  new THREE.Vector3(-18, 0, 22),
-];
+// Networking constants
+const ROOM_PREFIX = 'arcaderacing_';
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-const TRACK_CURVE = new THREE.CatmullRomCurve3(TRACK_WAYPOINTS, true);
-const TRACK_WIDTH = 9.2;
+function genCode(n = 6) {
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  }
+  return s;
+}
+
+// 1. TRACKS COORDINATE CONFIGURATIONS (Monza, Spa-Francorchamps, Brands Hatch)
+const TRACKS_CONFIG = {
+  monza: {
+    name: 'Monza Circuit',
+    waypoints: [
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(80, 0, 0),     // Retifilio Straight
+      new THREE.Vector3(150, 0, -10),
+      new THREE.Vector3(220, 0, -20),
+      new THREE.Vector3(250, 0, 10),   // Curva Grande
+      new THREE.Vector3(240, 0, 50),
+      new THREE.Vector3(190, 0, 75),   // Roggia Chicane
+      new THREE.Vector3(150, 0, 65),
+      new THREE.Vector3(110, 0, 95),   // Lesmo 1
+      new THREE.Vector3(70, 0, 115),   // Lesmo 2
+      new THREE.Vector3(10, 0, 90),    // Serraglio Straight
+      new THREE.Vector3(-60, 0, 70),   // Ascari Chicane
+      new THREE.Vector3(-110, 0, 45),
+      new THREE.Vector3(-150, 0, -10), // Parabolica
+      new THREE.Vector3(-110, 0, -45),
+      new THREE.Vector3(-45, 0, -25),
+    ],
+    width: 9.6
+  },
+  spa: {
+    name: 'Spa-Francorchamps',
+    waypoints: [
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(35, 0, -15),   // La Source hairpin
+      new THREE.Vector3(15, -4, -45),  // downhill run
+      new THREE.Vector3(25, 4, -80),   // Eau Rouge rise!
+      new THREE.Vector3(45, 12, -110), // Raidillon top
+      new THREE.Vector3(80, 12, -160), // Kemmel straight
+      new THREE.Vector3(120, 8, -200), // Les Combes chicane
+      new THREE.Vector3(95, 5, -230),
+      new THREE.Vector3(40, 1, -210),  // Malmedy
+      new THREE.Vector3(-10, -2, -170), // Bruxelles
+      new THREE.Vector3(-60, -4, -120), // Pouhon double-left
+      new THREE.Vector3(-90, -4, -70),
+      new THREE.Vector3(-65, -1, -30),  // Blanchimont
+      new THREE.Vector3(-25, 0, -10),
+    ],
+    width: 10.2
+  },
+  brands: {
+    name: 'Brands Hatch',
+    waypoints: [
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(45, -3, -15),  // Paddock Hill drop
+      new THREE.Vector3(75, -4, -45),
+      new THREE.Vector3(50, 0, -70),   // Druids hairpin
+      new THREE.Vector3(15, 2, -60),
+      new THREE.Vector3(-15, 0, -45),  // Graham Hill bend
+      new THREE.Vector3(-45, -1, -35), // Cooper straight
+      new THREE.Vector3(-75, -2, -5),  // Surtees
+      new THREE.Vector3(-55, 0, 25),   // Clearways
+      new THREE.Vector3(-20, 0, 15),
+    ],
+    width: 9.0
+  }
+};
+
 const TOTAL_SPLINE_STEPS = 400;
-const CURVE_POINTS = TRACK_CURVE.getPoints(TOTAL_SPLINE_STEPS);
-
-// Team colors and name lists for rivals
-const RIVAL_CONFIGS = [
-  { name: 'CyberDrift (CPU)', color: 0xffd166, startOffset: 1.4 },
-  { name: 'TurboBot (CPU)', color: 0x06b6d4, startOffset: -1.4 },
-  { name: 'NeonRider (CPU)', color: 0x10b981, startOffset: 2.8 },
-];
 
 export default function Racing() {
   const containerRef = useRef(null);
-  const stateRef = useRef({ restart: null, cleanup: null });
+  const minimapCanvasRef = useRef(null);
 
-  // Game UI States
-  const [phase, setPhase] = useState('menu'); // menu | playing | over
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
+  // Match / Lobby Configuration States
+  const [phase, setPhase] = useState('menu'); // menu | join_input | lobby | playing | over
+  const [selectedTrack, setSelectedTrack] = useState('monza');
+  const [selectedMode, setSelectedMode] = useState('gp'); // gp (Grand Prix) | tt (Time Trial) | mp (Multiplayer)
+  const [kartColor, setKartColor] = useState('#ff007f'); // default pink
+  const [roomCode, setRoomCode] = useState('');
+  const [joinInput, setJoinInput] = useState('');
+  const [peerErr, setPeerErr] = useState('');
+  const [connected, setConnected] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // In-Game UI HUD states
   const [lap, setLap] = useState(1);
   const [speed, setSpeed] = useState(0);
   const [leaderboard, setLeaderboard] = useState([]);
-  const [rankText, setRankText] = useState('4th');
+  const [rankText, setRankText] = useState('1st');
   const [score, setScore] = useState(0);
   const [lapTimes, setLapTimes] = useState([]);
+  const [activePowerup, setActivePowerup] = useState(null); // mushroom | banana | green_shell | red_shell | lightning
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  // Starting traffic lights countdown
+  const [countdownState, setCountdownState] = useState(-1); // 3, 2, 1, 0(GO!), -1(hidden)
+  const [showGoBanner, setShowGoBanner] = useState(false);
 
-    let scene, camera, renderer, clock;
-    let mainKartGroup, mainKartWheels = [];
-    let rivals = []; // array of rival karts
-    let particleSystems = []; // boost trails, drift sparks, exhaust smoke
-    let trackItems = []; // boost zippers, hazard crates, coins
-    let roadMesh, gridHelper;
-    let ambientLight, dirLight;
+  // Lobby peers info list
+  const [lobbyPeers, setLobbyPeers] = useState([]);
+
+  // Authoritative gameplay state ref
+  const stateRef = useRef({
+    scene: null,
+    camera: null,
+    renderer: null,
+    clock: null,
+    curvePoints: [],
+    trackCurve: null,
+    trackWidth: 9.0,
     
-    // Physics parameters for Player
-    let playerPhysics = {
-      pos: new THREE.Vector3(0, 0, 5),
-      angle: Math.PI * 0.9,
-      speed: 0,
-      velocity: new THREE.Vector3(),
-      driftAngle: 0,
-      isDrifting: false,
-      driftSide: 0, // -1 or 1
-      boostTimer: 0,
-      spinTimer: 0,
-      lap: 1,
-      checkpointPassed: false,
-      splineProgressIndex: 0,
-      score: 0,
-    };
+    // local player physics parameters
+    playerIndex: 0, // Assigned racer index on grid
+    pos: new THREE.Vector3(),
+    angle: 0,
+    speed: 0,
+    velocity: new THREE.Vector3(),
+    driftAngle: 0,
+    isDrifting: false,
+    driftSide: 0,
+    boostTimer: 0,
+    spinTimer: 0,
+    lap: 1,
+    checkpointPassed: false,
+    splineProgressIndex: 0,
+    score: 0,
+    scale: 1.0,
+    shrinkTimer: 0,
+    activePowerup: null,
 
-    const keys = { w: false, s: false, a: false, d: false, space: false };
-    let cameraShake = 0;
-    let animId;
-    let lapStartTime = 0;
-    let gameStartTime = 0;
-    let currentLapTimes = [];
+    // Controls
+    keys: { w: false, s: false, a: false, d: false, space: false },
 
-    // Screen Dimensions
-    const width = containerRef.current.clientWidth || window.innerWidth;
-    const height = containerRef.current.clientHeight || window.innerHeight;
+    // Dynamic Lists
+    karts: [], // List of all 16 racers
+    particleSystems: [],
+    powerupBoxes: [],
+    hazards: [], // deployed banana peels
+    projectiles: [], // flying shells
 
-    // 1. SCENE SETUP
-    scene = new THREE.Scene();
+    // Network connections
+    peersList: [], // { id, conn, name, color, index }
+    connected: false,
+    isHost: true,
+
+    // Countdown flag
+    countdown: -1,
+    matchStarted: false,
+    lapStartTime: 0,
+    gameStartTime: 0,
+    currentLapTimes: [],
+
+    animId: null
+  });
+
+  const peerRef = useRef(null);
+  const connsMapRef = useRef(new Map());
+
+  // Push scoreboard log helper
+  const addLog = (txt, isPlayer = true) => {
+    // simple console-log or push to feed
+  };
+
+  // Build grid positions double file staggering behind index 0
+  const assignGridPositions = (trackCurve, width) => {
+    const st = stateRef.current;
+    st.karts = [];
+
+    const colorsList = ['#ff007f', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e', '#a855f7', '#06b6d4', '#22c55e', '#eab308', '#e11d48', '#d946ef', '#6366f1', '#475569'];
+    const namesList = ['PLAYER', 'GUEST 1', 'TurboBot', 'CyberDrift', 'NeonRider', 'Rival C', 'Rival D', 'Rival E', 'Rival F', 'Rival G', 'Rival H', 'Rival I', 'Rival J', 'Rival K', 'Rival L', 'Rival M'];
+
+    for (let i = 0; i < 16; i++) {
+      // Stagger spacing: place karts behind index 0 (e.g. index 400 - i*3)
+      const splineIdx = (TOTAL_SPLINE_STEPS - (i * 3)) % TOTAL_SPLINE_STEPS;
+      const pt = trackCurve.getPointAt(splineIdx / TOTAL_SPLINE_STEPS);
+      const tangent = trackCurve.getTangentAt(splineIdx / TOTAL_SPLINE_STEPS);
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      
+      // Left / Right double file staggering
+      const offsetSide = (i % 2 === 0) ? -1.6 : 1.6;
+      const initialPos = pt.clone().addScaledVector(normal, offsetSide);
+      initialPos.y = pt.y + 0.28;
+
+      st.karts.push({
+        index: i,
+        name: namesList[i],
+        color: colorsList[i],
+        isRemoteHuman: false,
+        isLocalHuman: i === 0,
+        pos: initialPos,
+        angle: Math.PI * 0.9,
+        speed: 0,
+        velocity: new THREE.Vector3(),
+        driftAngle: 0,
+        isDrifting: false,
+        driftSide: 0,
+        boostTimer: 0,
+        spinTimer: 0,
+        shrinkTimer: 0,
+        lap: 1,
+        checkpointPassed: false,
+        splineProgressIndex: splineIdx,
+        scale: 1.0,
+        activePowerup: null,
+        modelGroup: null,
+        wheelsList: [],
+        score: 0,
+        // AI parameters
+        skill: 0.8 + (i * 0.015),
+        targetNode: (splineIdx + 12) % TOTAL_SPLINE_STEPS
+      });
+    }
+  };
+
+  // Sound synthesis beepers
+  const playBeep = (freq, duration) => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch(e){}
+  };
+
+  // Authoritative host starts countdown lights
+  const startRaceCountdown = () => {
+    const st = stateRef.current;
+    st.matchStarted = false;
+    st.countdown = 3;
+    setCountdownState(3);
+
+    const timer = setInterval(() => {
+      st.countdown -= 1;
+      setCountdownState(st.countdown);
+      
+      if (st.countdown > 0) {
+        playBeep(440, 0.15); // low pitch beep
+      } else if (st.countdown === 0) {
+        playBeep(880, 0.4); // high pitch GO beep
+        st.matchStarted = true;
+        setShowGoBanner(true);
+        setTimeout(() => setShowGoBanner(false), 2000);
+        st.gameStartTime = st.clock.getElapsedTime();
+        st.lapStartTime = st.gameStartTime;
+        clearInterval(timer);
+        setTimeout(() => setCountdownState(-1), 1000);
+      }
+    }, 1000);
+  };
+
+  // Sync state data channels
+  const broadcastSyncAll = () => {
+    const st = stateRef.current;
+    if (st.isHost && st.connected) {
+      connsMapRef.current.forEach(conn => {
+        conn.send({
+          type: 'sync_all',
+          karts: st.karts.map(k => ({
+            index: k.index,
+            x: k.pos.x,
+            y: k.pos.y,
+            z: k.pos.z,
+            angle: k.angle,
+            speed: k.speed,
+            driftAngle: k.driftAngle,
+            isDrifting: k.isDrifting,
+            lap: k.lap,
+            spinTimer: k.spinTimer,
+            scale: k.scale,
+            progress: k.splineProgressIndex,
+            activePowerup: k.activePowerup
+          })),
+          boxes: st.powerupBoxes.map(b => ({ id: b.id, active: b.active })),
+          hazards: st.hazards.map(h => ({ id: h.id, x: h.pos.x, y: h.pos.y, z: h.pos.z, active: h.active })),
+          projectiles: st.projectiles.map(p => ({ id: p.id, x: p.mesh.position.x, y: p.mesh.position.y, z: p.mesh.position.z, type: p.type })),
+          countdown: st.countdown,
+          matchStarted: st.matchStarted
+        });
+      });
+    }
+  };
+
+  const handleRemoteRacerSync = (data) => {
+    const st = stateRef.current;
+    const remoteIndex = data.index;
+    if (remoteIndex !== undefined && st.karts[remoteIndex]) {
+      const k = st.karts[remoteIndex];
+      // authoritatively update position values
+      k.pos.set(data.x, data.y, data.z);
+      k.angle = data.angle;
+      k.speed = data.speed;
+      k.driftAngle = data.driftAngle;
+      k.isDrifting = data.isDrifting;
+      k.activePowerup = data.activePowerup;
+    }
+  };
+
+  // Wire network client channels
+  const wireConnection = (conn, isHostSide) => {
+    const st = stateRef.current;
+    st.connected = true;
+    setConnected(true);
+
+    conn.on('data', (data) => {
+      if (data.type === 'sync_all') {
+        // Client updates karts coordinates autoritatively
+        data.karts.forEach((syncKart) => {
+          const k = st.karts[syncKart.index];
+          if (k) {
+            if (!k.isLocalHuman) {
+              k.pos.set(syncKart.x, syncKart.y, syncKart.z);
+              k.angle = syncKart.angle;
+              k.speed = syncKart.speed;
+              k.driftAngle = syncKart.driftAngle;
+              k.isDrifting = syncKart.isDrifting;
+            }
+            k.lap = syncKart.lap;
+            k.spinTimer = syncKart.spinTimer;
+            k.scale = syncKart.scale;
+            k.splineProgressIndex = syncKart.progress;
+            k.activePowerup = syncKart.activePowerup;
+          }
+        });
+
+        // Sync boxes
+        data.boxes.forEach(boxSync => {
+          const b = st.powerupBoxes.find(x => x.id === boxSync.id);
+          if (b && b.mesh) {
+            b.active = boxSync.active;
+            b.mesh.visible = boxSync.active;
+          }
+        });
+
+        // Sync countdown / start
+        if (st.countdown !== data.countdown) {
+          st.countdown = data.countdown;
+          setCountdownState(data.countdown);
+          if (st.countdown === 0) {
+            st.matchStarted = true;
+            setShowGoBanner(true);
+            setTimeout(() => setShowGoBanner(false), 2000);
+            st.gameStartTime = st.clock.getElapsedTime();
+            st.lapStartTime = st.gameStartTime;
+          }
+        }
+        st.matchStarted = data.matchStarted;
+      }
+      else if (data.type === 'sync') {
+        // Host parses client updates
+        handleRemoteRacerSync(data);
+      }
+      else if (data.type === 'lobby_update') {
+        setLobbyPeers(data.peers);
+        setSelectedTrack(data.track);
+        setSelectedMode(data.mode);
+      }
+      else if (data.type === 'start_mp_match') {
+        setPhase('playing');
+        st.matchStarted = false;
+        st.countdown = 3;
+        setCountdownState(3);
+      }
+    });
+
+    conn.on('close', () => {
+      st.connected = false;
+      setConnected(false);
+      addLog('Connection lost.', false);
+    });
+  };
+
+  // Host P2P Lobby
+  const createRoom = () => {
+    cleanupPeer();
+    const code = genCode();
+    setRoomCode(code);
+    setPhase('lobby');
+    setPeerErr('');
+
+    const st = stateRef.current;
+    st.isHost = true;
+
+    const peer = new Peer(ROOM_PREFIX + code);
+    peerRef.current = peer;
+
+    peer.on('connection', (conn) => {
+      const idx = st.peersList.length + 1; // Assign Racer Index
+      const peerInfo = { id: conn.peer, conn, name: `Player ${idx + 1}`, color: '#ff3b30', index: idx };
+      st.peersList.push(peerInfo);
+      connsMapRef.current.set(conn.peer, conn);
+      
+      // Update racer flags
+      if (st.karts[idx]) {
+        st.karts[idx].isRemoteHuman = true;
+        st.karts[idx].isLocalHuman = false;
+        st.karts[idx].name = peerInfo.name;
+      }
+
+      wireConnection(conn, true);
+
+      // Notify guest client of their details
+      conn.send({
+        type: 'init_client',
+        index: idx,
+        track: selectedTrack,
+        mode: selectedMode
+      });
+
+      // Broadcast list updates to all peers
+      const peersData = st.peersList.map(p => ({ name: p.name, color: p.color }));
+      setLobbyPeers([{ name: 'Host (You)', color: kartColor }, ...peersData]);
+      
+      st.peersList.forEach(p => {
+        p.conn.send({
+          type: 'lobby_update',
+          peers: [{ name: 'Host', color: kartColor }, ...peersData],
+          track: selectedTrack,
+          mode: selectedMode
+        });
+      });
+    });
+
+    setLobbyPeers([{ name: 'Host (You)', color: kartColor }]);
+  };
+
+  // Guest joins P2P Lobby
+  const joinRoom = () => {
+    const code = joinInput.toUpperCase().trim();
+    if (code.length < 4) {
+      setPeerErr('Insert a valid Room Code');
+      return;
+    }
+    cleanupPeer();
+    setPeerErr('');
+    
+    const st = stateRef.current;
+    st.isHost = false;
+
+    const peer = new Peer();
+    peerRef.current = peer;
+    
+    peer.on('open', () => {
+      const conn = peer.connect(ROOM_PREFIX + code);
+      connsMapRef.current.set(conn.peer, conn);
+
+      conn.on('data', (data) => {
+        if (data.type === 'init_client') {
+          st.playerIndex = data.index;
+          setSelectedTrack(data.track);
+          setSelectedMode(data.mode);
+          setPhase('lobby');
+        }
+      });
+
+      wireConnection(conn, false);
+      setRoomCode(code);
+    });
+
+    peer.on('error', (err) => {
+      setPeerErr('Room ID not found');
+      setPhase('menu');
+    });
+  };
+
+  const cleanupPeer = useCallback(() => {
+    connsMapRef.current.forEach(c => { try{ c.close(); } catch(e){} });
+    connsMapRef.current.clear();
+    if (peerRef.current) {
+      try { peerRef.current.destroy(); } catch(e){}
+      peerRef.current = null;
+    }
+    setConnected(false);
+  }, []);
+
+  const triggerStartMatch = () => {
+    const st = stateRef.current;
+    if (st.isHost && st.connected) {
+      st.peersList.forEach(p => {
+        p.conn.send({ type: 'start_mp_match' });
+      });
+    }
+    setPhase('playing');
+  };
+
+  // In-game powerup usage triggers
+  const triggerPowerup = () => {
+    const st = stateRef.current;
+    const player = st.karts[st.playerIndex];
+    if (!player || player.spinTimer > 0 || !st.matchStarted || st.isDead) return;
+
+    const type = player.activePowerup;
+    if (!type) return;
+
+    player.activePowerup = null;
+    setActivePowerup(null);
+
+    // Get tangent direction vectors
+    const forward = new THREE.Vector3(
+      Math.sin(player.angle + player.driftAngle),
+      0,
+      Math.cos(player.angle + player.driftAngle)
+    ).normalize();
+
+    if (type === 'mushroom') {
+      // Speed Boost!
+      player.boostTimer = 1.8;
+      player.speed = 34; // burst speed
+      playBeep(650, 0.2);
+    }
+    else if (type === 'banana') {
+      // Spawn banana peel behind kart
+      const spawnPos = player.pos.clone().subScaledVector(forward, 1.8);
+      spawnPos.y = TRACK_CURVE.getPointAt(player.splineProgressIndex / TOTAL_SPLINE_STEPS).y + 0.05;
+
+      const bananaGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.05, 12);
+      const bananaMat = new THREE.MeshBasicMaterial({ color: 0xffea00 }); // Yellow cylinder
+      const bananaMesh = new THREE.Mesh(bananaGeo, bananaMat);
+      bananaMesh.position.copy(spawnPos);
+      st.scene.add(bananaMesh);
+
+      st.hazards.push({
+        id: `banana_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+        pos: spawnPos,
+        mesh: bananaMesh,
+        active: true,
+        radius: 0.9
+      });
+      playBeep(300, 0.1);
+    }
+    else if (type === 'green_shell') {
+      // Fire forward along road tangent direction
+      const spawnPos = player.pos.clone().addScaledVector(forward, 1.8);
+      spawnPos.y = TRACK_CURVE.getPointAt(player.splineProgressIndex / TOTAL_SPLINE_STEPS).y + 0.15;
+
+      const shellGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 12);
+      const shellMat = new THREE.MeshBasicMaterial({ color: 0x22c55e }); // Green cylinder
+      const shellMesh = new THREE.Mesh(shellGeo, shellMat);
+      shellMesh.position.copy(spawnPos);
+      st.scene.add(shellMesh);
+
+      st.projectiles.push({
+        id: `shell_${Date.now()}`,
+        type: 'green',
+        mesh: shellMesh,
+        vel: forward.clone().multiplyScalar(30), // speed 30m/s
+        age: 0
+      });
+      playBeep(520, 0.15);
+    }
+    else if (type === 'red_shell') {
+      // Homing shell targets kart directly ahead
+      const standings = getRacerStandingsList();
+      const myRank = standings.findIndex(k => k.index === st.playerIndex);
+      let targetIndex = -1;
+      
+      if (myRank > 0) {
+        // Target the racer in front of player
+        targetIndex = standings[myRank - 1].index;
+      }
+
+      const spawnPos = player.pos.clone().addScaledVector(forward, 1.8);
+      spawnPos.y = TRACK_CURVE.getPointAt(player.splineProgressIndex / TOTAL_SPLINE_STEPS).y + 0.15;
+
+      const shellGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 12);
+      const shellMat = new THREE.MeshBasicMaterial({ color: 0xef4444 }); // Red cylinder
+      const shellMesh = new THREE.Mesh(shellGeo, shellMat);
+      shellMesh.position.copy(spawnPos);
+      st.scene.add(shellMesh);
+
+      st.projectiles.push({
+        id: `shell_${Date.now()}`,
+        type: 'red',
+        mesh: shellMesh,
+        targetIdx: targetIndex,
+        age: 0
+      });
+      playBeep(580, 0.18);
+    }
+    else if (type === 'lightning') {
+      // Lightning strike bolts strike everyone else!
+      st.cameraShake = 0.55;
+      playBeep(150, 0.4);
+
+      st.karts.forEach(k => {
+        if (k.index === st.playerIndex) return;
+        k.scale = 0.4;
+        k.shrinkTimer = 4.0;
+        k.speed *= 0.5;
+        k.modelGroup.scale.set(0.4, 0.4, 0.4);
+      });
+      addLog('Lightning strike triggered!', true);
+    }
+  };
+
+  // Helper sorting racer standings list
+  const getRacerStandingsList = () => {
+    const st = stateRef.current;
+    const standings = st.karts.map(k => ({
+      index: k.index,
+      name: k.name,
+      lap: k.lap,
+      progress: k.splineProgressIndex,
+      color: k.color
+    }));
+    standings.sort((a, b) => {
+      const scoreA = a.lap * 2000 + a.progress;
+      const scoreB = b.lap * 2000 + b.progress;
+      return scoreB - scoreA;
+    });
+    return standings;
+  };
+
+  // Three.js curve helper configurations
+  let TRACK_CURVE = null;
+  let CURVE_POINTS = [];
+  const trackCfg = TRACKS_CONFIG[selectedTrack];
+  if (trackCfg) {
+    TRACK_CURVE = new THREE.CatmullRomCurve3(trackCfg.waypoints, true);
+    CURVE_POINTS = TRACK_CURVE.getPoints(TOTAL_SPLINE_STEPS);
+  }
+
+  // 3D Canvas initialization
+  useEffect(() => {
+    if (phase !== 'playing' || !containerRef.current) return;
+
+    const st = stateRef.current;
+    
+    // Set parameters
+    const trackInfo = TRACKS_CONFIG[selectedTrack];
+    st.trackCurve = new THREE.CatmullRomCurve3(trackInfo.waypoints, true);
+    st.curvePoints = st.trackCurve.getPoints(TOTAL_SPLINE_STEPS);
+    st.trackWidth = trackInfo.width;
+
+    const width = containerRef.current.clientWidth;
+    const height = containerRef.current.clientHeight;
+
+    const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x05020c);
     scene.fog = new THREE.FogExp2(0x05020c, 0.012);
+    st.scene = scene;
 
-    camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    const camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 1000);
+    st.camera = camera;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     containerRef.current.appendChild(renderer.domElement);
+    st.renderer = renderer;
 
-    clock = new THREE.Clock();
+    const clock = new THREE.Clock();
+    st.clock = clock;
 
-    // 2. LIGHTING (Cyberpunk Theme)
-    ambientLight = new THREE.AmbientLight(0x1a1230, 0.85);
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0x1a1230, 0.85);
     scene.add(ambientLight);
 
-    dirLight = new THREE.DirectionalLight(0xff00ff, 1.45);
+    const dirLight = new THREE.DirectionalLight(0xff00ff, 1.45);
     dirLight.position.set(40, 80, 20);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.set(1024, 1024);
-    dirLight.shadow.camera.near = 10;
-    dirLight.shadow.camera.far = 280;
-    dirLight.shadow.camera.left = -90;
-    dirLight.shadow.camera.right = 90;
-    dirLight.shadow.camera.top = 90;
-    dirLight.shadow.camera.bottom = -90;
     scene.add(dirLight);
 
     const helperLight = new THREE.DirectionalLight(0x00ffff, 0.85);
     helperLight.position.set(-40, 40, -40);
     scene.add(helperLight);
 
-    // 3. SYNTHWAVE GRID GROUND
-    const gridGeo = new THREE.PlaneGeometry(1000, 1000, 40, 40);
-    const gridMat = new THREE.MeshBasicMaterial({ color: 0x1c0f3d, wireframe: true, transparent: true, opacity: 0.28 });
-    const gridFloor = new THREE.Mesh(gridGeo, gridMat);
+    // Synthwave floor grids
+    const gridFloor = new THREE.Mesh(
+      new THREE.PlaneGeometry(1000, 1000, 40, 40),
+      new THREE.MeshBasicMaterial({ color: 0x1c0f3d, wireframe: true, transparent: true, opacity: 0.28 })
+    );
     gridFloor.rotation.x = -Math.PI / 2;
     gridFloor.position.y = -0.05;
     scene.add(gridFloor);
 
-    // Huge dark ocean floor underneath
-    const oceanGeo = new THREE.PlaneGeometry(1200, 1200);
-    const oceanMat = new THREE.MeshStandardMaterial({ color: 0x030107, roughness: 0.95 });
-    const ocean = new THREE.Mesh(oceanGeo, oceanMat);
-    ocean.rotation.x = -Math.PI / 2;
-    ocean.position.y = -0.15;
-    ocean.receiveShadow = true;
-    scene.add(ocean);
-
-    // 4. ROAD PROCEDURAL CREATION (TRIANGLE MESH RIBBON)
+    // Road procedural creation
     const roadGeometry = new THREE.BufferGeometry();
     const vertices = [];
     const colors = [];
     const indices = [];
 
-    // Curbs array (red and white)
     const curbGeometryL = new THREE.BufferGeometry();
     const curbGeometryR = new THREE.BufferGeometry();
     const curbVertsL = [];
@@ -155,23 +712,21 @@ export default function Racing() {
 
     for (let i = 0; i <= TOTAL_SPLINE_STEPS; i++) {
       const u = i / TOTAL_SPLINE_STEPS;
-      const p = TRACK_CURVE.getPointAt(u % 1.0);
-      const tangent = TRACK_CURVE.getTangentAt(u % 1.0);
+      const p = st.trackCurve.getPointAt(u % 1.0);
+      const tangent = st.trackCurve.getTangentAt(u % 1.0);
       const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
 
-      const leftPt = p.clone().addScaledVector(normal, -TRACK_WIDTH / 2);
-      const rightPt = p.clone().addScaledVector(normal, TRACK_WIDTH / 2);
+      const leftPt = p.clone().addScaledVector(normal, -st.trackWidth / 2);
+      const rightPt = p.clone().addScaledVector(normal, st.trackWidth / 2);
 
       vertices.push(leftPt.x, leftPt.y + 0.01, leftPt.z);
       vertices.push(rightPt.x, rightPt.y + 0.01, rightPt.z);
 
-      // Dark asphalt color
       colors.push(0.08, 0.07, 0.12);
       colors.push(0.08, 0.07, 0.12);
 
-      // Curb quads
-      const leftCurbOuter = p.clone().addScaledVector(normal, -TRACK_WIDTH / 2 - 0.45);
-      const rightCurbOuter = p.clone().addScaledVector(normal, TRACK_WIDTH / 2 + 0.45);
+      const leftCurbOuter = p.clone().addScaledVector(normal, -st.trackWidth / 2 - 0.45);
+      const rightCurbOuter = p.clone().addScaledVector(normal, st.trackWidth / 2 + 0.45);
 
       curbVertsL.push(leftCurbOuter.x, leftCurbOuter.y + 0.02, leftCurbOuter.z);
       curbVertsL.push(leftPt.x, leftPt.y + 0.02, leftPt.z);
@@ -179,7 +734,6 @@ export default function Racing() {
       curbVertsR.push(rightPt.x, rightPt.y + 0.02, rightPt.z);
       curbVertsR.push(rightCurbOuter.x, rightCurbOuter.y + 0.02, rightCurbOuter.z);
 
-      // Alternating red/white stripes
       const stripeColor = Math.floor(i / 3) % 2 === 0 ? [0.95, 0.05, 0.35] : [0.95, 0.95, 0.95];
       curbColorsL.push(...stripeColor, ...stripeColor);
       curbColorsR.push(...stripeColor, ...stripeColor);
@@ -202,122 +756,64 @@ export default function Racing() {
     roadGeometry.setIndex(indices);
     roadGeometry.computeVertexNormals();
 
-    const roadMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.1 });
-    roadMesh = new THREE.Mesh(roadGeometry, roadMat);
+    const roadMesh = new THREE.Mesh(roadGeometry, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.1 }));
     roadMesh.receiveShadow = true;
     scene.add(roadMesh);
 
-    // Curbs Addition
-    const curbMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65 });
-    
     curbGeometryL.setAttribute('position', new THREE.Float32BufferAttribute(curbVertsL, 3));
     curbGeometryL.setAttribute('color', new THREE.Float32BufferAttribute(curbColorsL, 3));
     curbGeometryL.setIndex(curbIndicesL);
     curbGeometryL.computeVertexNormals();
-    const curbMeshL = new THREE.Mesh(curbGeometryL, curbMat);
-    scene.add(curbMeshL);
+    scene.add(new THREE.Mesh(curbGeometryL, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65 })));
 
     curbGeometryR.setAttribute('position', new THREE.Float32BufferAttribute(curbVertsR, 3));
     curbGeometryR.setAttribute('color', new THREE.Float32BufferAttribute(curbColorsR, 3));
     curbGeometryR.setIndex(curbIndicesR);
     curbGeometryR.computeVertexNormals();
-    const curbMeshR = new THREE.Mesh(curbGeometryR, curbMat);
-    scene.add(curbMeshR);
+    scene.add(new THREE.Mesh(curbGeometryR, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65 })));
 
-    // Center lane guideline (neon dotted strip)
-    const splineGeo = new THREE.BufferGeometry().setFromPoints(CURVE_POINTS);
-    const splineMat = new THREE.LineBasicMaterial({ color: 0x00f5d4, transparent: true, opacity: 0.5 });
-    const centerLine = new THREE.LineLoop(splineGeo, splineMat);
+    // Neon center line
+    const splineGeo = new THREE.BufferGeometry().setFromPoints(st.curvePoints);
+    const centerLine = new THREE.LineLoop(splineGeo, new THREE.LineBasicMaterial({ color: 0x00f5d4, transparent: true, opacity: 0.5 }));
     centerLine.position.y = 0.03;
     scene.add(centerLine);
 
-    // 5. PROCEDURAL KART MESH GENERATOR
+    // Chassis builder
     function buildGoKart(colorHex) {
       const kart = new THREE.Group();
-
-      // Main Chassis Plate
-      const chassisMat = new THREE.MeshStandardMaterial({ color: 0x222226, metalness: 0.85, roughness: 0.3 });
-      const basePlate = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.16, 2.3), chassisMat);
+      const basePlate = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.16, 2.3), new THREE.MeshStandardMaterial({ color: 0x222226, metalness: 0.85 }));
       basePlate.position.y = 0.28;
-      basePlate.castShadow = true;
-      basePlate.receiveShadow = true;
       kart.add(basePlate);
 
-      // Colored Body Shell
       const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.62, roughness: 0.15 });
 
-      // Pointy Synthwave nosecone
-      const noseGeo = new THREE.BoxGeometry(0.9, 0.22, 0.65);
-      const nose = new THREE.Mesh(noseGeo, bodyMat);
+      const nose = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.65), bodyMat);
       nose.position.set(0, 0.36, -0.95);
-      nose.castShadow = true;
       kart.add(nose);
 
-      // Low aerodynamics front spoiler wing
       const fWing = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.08, 0.32), bodyMat);
       fWing.position.set(0, 0.22, -1.35);
-      fWing.castShadow = true;
       kart.add(fWing);
 
-      // Right and Left Side Pods
       const lPod = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 1.25), bodyMat);
       lPod.position.set(-0.64, 0.36, 0);
-      lPod.castShadow = true;
       kart.add(lPod);
 
       const rPod = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 1.25), bodyMat);
       rPod.position.set(0.64, 0.36, 0);
-      rPod.castShadow = true;
       kart.add(rPod);
 
-      // Bucket Racing Seat
-      const seatMat = new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.85 });
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.62, 0.52), seatMat);
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.62, 0.52), new THREE.MeshStandardMaterial({ color: 0x121214 }));
       seat.position.set(0, 0.58, 0.35);
       kart.add(seat);
 
-      // Steering Wheel Column and Torus Wheel
-      const column = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.72), chassisMat);
-      column.rotation.x = -Math.PI / 5;
-      column.position.set(0, 0.52, -0.32);
-      kart.add(column);
-
-      const sWheel = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.028, 8, 16), seatMat);
-      sWheel.rotation.x = -Math.PI / 5;
-      sWheel.position.set(0, 0.78, -0.46);
-      kart.add(sWheel);
-
-      // Heavy Engine Block
-      const engineMat = new THREE.MeshStandardMaterial({ color: 0x7a7a7c, metalness: 0.9, roughness: 0.1 });
-      const block = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.56, 0.44), engineMat);
-      block.position.set(0, 0.56, 0.9);
-      block.castShadow = true;
-      kart.add(block);
-
-      const tailpipe = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.45), engineMat);
-      tailpipe.rotation.x = Math.PI / 3;
-      tailpipe.position.set(0.18, 0.68, 1.18);
-      kart.add(tailpipe);
-
-      // Spoiler struts and high spoiler wing
-      const strutL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.75, 0.05), engineMat);
-      strutL.position.set(-0.38, 0.82, 1.15);
-      kart.add(strutL);
-
-      const strutR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.75, 0.05), engineMat);
-      strutR.position.set(0.38, 0.82, 1.15);
-      kart.add(strutR);
-
       const spoiler = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.08, 0.48), bodyMat);
       spoiler.position.set(0, 1.2, 1.15);
-      spoiler.castShadow = true;
       kart.add(spoiler);
 
       // Wheels
       const wheelsList = [];
       const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.88 });
-      const rimMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.85, roughness: 0.2 });
-
       const wPositions = [
         { x: -0.68, y: 0.28, z: -0.72, isFront: true },
         { x: 0.68, y: 0.28, z: -0.72, isFront: true },
@@ -328,670 +824,174 @@ export default function Racing() {
       wPositions.forEach((wp) => {
         const wGroup = new THREE.Group();
         wGroup.position.set(wp.x, wp.y, wp.z);
-
         const radius = wp.isFront ? 0.34 : 0.44;
         const thickness = wp.isFront ? 0.26 : 0.36;
 
         const tire = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, thickness, 16), tireMat);
         tire.rotation.z = Math.PI / 2;
-        tire.castShadow = true;
         wGroup.add(tire);
 
-        const rim = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.55, radius * 0.55, thickness + 0.03, 12), rimMat);
-        rim.rotation.z = Math.PI / 2;
-        wGroup.add(rim);
-
         kart.add(wGroup);
-        wheelsList.push({ mesh: wGroup, isFront: wp.isFront, isLeft: wp.x < 0, radius });
+        wheelsList.push({ mesh: wGroup, isFront: wp.isFront, radius });
       });
 
       scene.add(kart);
       return { model: kart, wheels: wheelsList };
     }
 
-    // 6. BUILD KART INSTANCES (Player & 3 CPUs)
-    const playerBuild = buildGoKart(0xff007f); // Neon Pink
-    mainKartGroup = playerBuild.model;
-    mainKartWheels = playerBuild.wheels;
+    // Populate karts onto grid
+    assignGridPositions(st.trackCurve, st.trackWidth);
 
-    mainKartGroup.position.copy(playerPhysics.pos);
-    mainKartGroup.rotation.y = playerPhysics.angle;
-
-    // AI rivals configuration
-    RIVAL_CONFIGS.forEach((cfg, idx) => {
-      const build = buildGoKart(cfg.color);
-      
-      const startSeg = 4;
-      const startPt = TRACK_CURVE.getPointAt(startSeg / TOTAL_SPLINE_STEPS);
-      const tangent = TRACK_CURVE.getTangentAt(startSeg / TOTAL_SPLINE_STEPS);
-      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
-      
-      const aiPos = startPt.clone().addScaledVector(normal, cfg.startOffset);
-
-      build.model.position.copy(aiPos);
-      build.model.rotation.y = Math.PI * 0.9;
-
-      rivals.push({
-        name: cfg.name,
-        colorHex: cfg.color,
-        model: build.model,
-        wheels: build.wheels,
-        pos: aiPos,
-        angle: Math.PI * 0.9,
-        speed: 0,
-        velocity: new THREE.Vector3(),
-        lap: 1,
-        checkpointPassed: false,
-        splineProgressIndex: startSeg,
-        spinTimer: 0,
-        skill: 0.82 + idx * 0.06, // unique speed/turn capabilities
-        targetNode: 15,
-      });
-    });
-
-    // 7. TRACK ASSETS & DYNAMIC ITEMS SPINNER
-    // Place boost arrows (zippers), spinning coins and red hazard boxes
-    const spawnPositions = [
-      { step: 18, type: 'zipper', side: 0 },
-      { step: 32, type: 'coin', side: -1.6 },
-      { step: 34, type: 'coin', side: 0 },
-      { step: 36, type: 'coin', side: 1.6 },
-      { step: 55, type: 'crate', side: -1.2 },
-      { step: 57, type: 'crate', side: 1.2 },
-      { step: 80, type: 'zipper', side: 1.8 },
-      { step: 110, type: 'coin', side: -2.0 },
-      { step: 115, type: 'coin', side: 2.0 },
-      { step: 135, type: 'crate', side: 0 },
-      { step: 160, type: 'zipper', side: -1.8 },
-      { step: 190, type: 'coin', side: 0 },
-      { step: 193, type: 'coin', side: 0 },
-      { step: 215, type: 'crate', side: 1.5 },
-      { step: 245, type: 'zipper', side: 0 },
-      { step: 275, type: 'coin', side: -1.5 },
-      { step: 278, type: 'coin', side: 1.5 },
-      { step: 305, type: 'crate', side: -1.5 },
-      { step: 325, type: 'zipper', side: 1.4 },
-      { step: 360, type: 'coin', side: 0 },
-      { step: 365, type: 'coin', side: 0 },
-    ];
-
-    spawnPositions.forEach((sp) => {
-      const p = TRACK_CURVE.getPointAt(sp.step / TOTAL_SPLINE_STEPS);
-      const tangent = TRACK_CURVE.getTangentAt(sp.step / TOTAL_SPLINE_STEPS);
-      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
-      const pos = p.clone().addScaledVector(normal, sp.side);
-      pos.y = 0.05;
-
-      let itemMesh;
-
-      if (sp.type === 'zipper') {
-        // Glowing Neon Arrow Plane
-        const shape = new THREE.BufferGeometry();
-        const pts = [
-          new THREE.Vector3(0, 0.02, -0.9),
-          new THREE.Vector3(-0.9, 0.02, 0.5),
-          new THREE.Vector3(-0.4, 0.02, 0.5),
-          new THREE.Vector3(-0.4, 0.02, 0.9),
-          new THREE.Vector3(0.4, 0.02, 0.9),
-          new THREE.Vector3(0.4, 0.02, 0.5),
-          new THREE.Vector3(0.9, 0.02, 0.5)
-        ];
-        shape.setFromPoints(pts);
-        
-        // Custom simple indices for arrow
-        const zipperIndices = [
-          0, 1, 6,
-          2, 3, 4,
-          2, 4, 5
-        ];
-        shape.setIndex(zipperIndices);
-        shape.computeVertexNormals();
-
-        const zipMat = new THREE.MeshBasicMaterial({ color: 0xffd166, side: THREE.DoubleSide });
-        itemMesh = new THREE.Mesh(shape, zipMat);
-        itemMesh.position.copy(pos);
-        
-        // Align arrow forward along road tangent
-        const lookTarget = pos.clone().add(tangent);
-        itemMesh.lookAt(lookTarget);
-        scene.add(itemMesh);
-      } 
-      else if (sp.type === 'coin') {
-        // Floating Gold Dodecahedron Coin
-        const coinGeo = new THREE.DodecahedronGeometry(0.44, 0);
-        const coinMat = new THREE.MeshStandardMaterial({
-          color: 0xffd166,
-          emissive: 0xffa800,
-          emissiveIntensity: 0.35,
-          roughness: 0.15,
-          metalness: 0.95
-        });
-        itemMesh = new THREE.Mesh(coinGeo, coinMat);
-        itemMesh.position.copy(pos);
-        itemMesh.position.y = 0.65;
-        scene.add(itemMesh);
-      } 
-      else if (sp.type === 'crate') {
-        // Warning Hazard red block
-        const crateGeo = new THREE.BoxGeometry(0.85, 0.85, 0.85);
-        const crateMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.52 });
-        itemMesh = new THREE.Mesh(crateGeo, crateMat);
-        itemMesh.position.copy(pos);
-        itemMesh.position.y = 0.44;
-        itemMesh.castShadow = true;
-        scene.add(itemMesh);
-        
-        // Add neon glowing stripes around warning box
-        const outline = new THREE.LineSegments(
-          new THREE.EdgesGeometry(crateGeo),
-          new THREE.LineBasicMaterial({ color: 0xffa000, linewidth: 2 })
-        );
-        itemMesh.add(outline);
+    st.karts.forEach((k) => {
+      // Overwrite local player color matching choice
+      let col = k.color;
+      if (k.index === st.playerIndex) {
+        col = kartColor; k.color = kartColor;
       }
+      
+      const build = buildGoKart(col);
+      k.modelGroup = build.model;
+      k.wheelsList = build.wheels;
+      k.modelGroup.position.copy(k.pos);
+      k.modelGroup.rotation.y = k.angle;
+    });
 
-      trackItems.push({
-        type: sp.type,
-        mesh: itemMesh,
-        pos: pos,
-        radius: sp.type === 'zipper' ? 1.6 : 0.9,
-        active: true,
+    // Populate track items (glowing item boxes and boost zippers)
+    st.powerupBoxes = [];
+    st.hazards = [];
+    st.projectiles = [];
+    st.particleSystems = [];
+
+    // Place Mario-kart style item boxes around track curve
+    const boxSplineSegments = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360];
+    boxSplineSegments.forEach((step, idx) => {
+      const p = st.trackCurve.getPointAt(step / TOTAL_SPLINE_STEPS);
+      const tangent = st.trackCurve.getTangentAt(step / TOTAL_SPLINE_STEPS);
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      
+      // Spawn 3 side pods item boxes at each marker
+      const horizontalOffsets = [-2.2, 0, 2.2];
+      horizontalOffsets.forEach((side, boxIdx) => {
+        const spawnPos = p.clone().addScaledVector(normal, side);
+        spawnPos.y = p.y + 0.6; // floating height
+
+        // Rotating cube mesh
+        const bMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.72, 0.72, 0.72),
+          new THREE.MeshStandardMaterial({
+            color: 0x00e5ff,
+            transparent: true,
+            opacity: 0.65,
+            emissive: 0x00a0ff
+          })
+        );
+        bMesh.position.copy(spawnPos);
+        scene.add(bMesh);
+
+        st.powerupBoxes.push({
+          id: `box_${step}_${boxIdx}`,
+          mesh: bMesh,
+          pos: spawnPos,
+          active: true,
+          respawnTimer: 0
+        });
       });
     });
 
-    // 8. SCENERY BACKGROUND DECOR (NEON ARCHES, FLOATING OBJECTS)
-    // Add glowing synthwave starting arches and structures
-    const archPoints = [0, 100, 200, 300];
-    archPoints.forEach((step) => {
-      const p = TRACK_CURVE.getPointAt(step / TOTAL_SPLINE_STEPS);
-      const tangent = TRACK_CURVE.getTangentAt(step / TOTAL_SPLINE_STEPS);
+    // Spawning booster zippers along track
+    const zipperSplineSegments = [15, 75, 135, 205, 285, 345];
+    zipperSplineSegments.forEach((step) => {
+      const p = st.trackCurve.getPointAt(step / TOTAL_SPLINE_STEPS);
+      const tangent = st.trackCurve.getTangentAt(step / TOTAL_SPLINE_STEPS);
       const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      const spawnPos = p.clone();
+      spawnPos.y = p.y + 0.02;
 
+      // Glow zipper plane arrow mesh
+      const zipMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(3.0, 0.05, 2.0),
+        new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.75 })
+      );
+      zipMesh.position.copy(spawnPos);
+      zipMesh.lookAt(spawnPos.clone().add(tangent));
+      scene.add(zipMesh);
+
+      st.powerupBoxes.push({
+        id: `zipper_${step}`,
+        type: 'zipper',
+        mesh: zipMesh,
+        pos: spawnPos,
+        active: true
+      });
+    });
+
+    // Procedural neon decorative arches
+    const archSteps = [0, 100, 200, 300];
+    archSteps.forEach(step => {
+      const p = st.trackCurve.getPointAt(step / TOTAL_SPLINE_STEPS);
+      const tangent = st.trackCurve.getTangentAt(step / TOTAL_SPLINE_STEPS);
+      
       const archGroup = new THREE.Group();
       archGroup.position.copy(p);
       archGroup.lookAt(p.clone().add(tangent));
 
-      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x18181c, metalness: 0.8, roughness: 0.3 });
-      const neonBeamMat = new THREE.MeshBasicMaterial({ color: step === 0 ? 0xff00ff : 0x00ffff });
+      const pillarL = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 7.5), new THREE.MeshStandardMaterial({ color: 0x18181c }));
+      pillarL.position.set(-st.trackWidth/2 - 0.8, 3.75, 0);
+      archGroup.add(pillarL);
 
-      const lPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 7.8, 8), pillarMat);
-      lPillar.position.set(-TRACK_WIDTH / 2 - 0.9, 3.9, 0);
-      archGroup.add(lPillar);
+      const pillarR = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 7.5), new THREE.MeshStandardMaterial({ color: 0x18181c }));
+      pillarR.position.set(st.trackWidth/2 + 0.8, 3.75, 0);
+      archGroup.add(pillarR);
 
-      const rPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 7.8, 8), pillarMat);
-      rPillar.position.set(TRACK_WIDTH / 2 + 0.9, 3.9, 0);
-      archGroup.add(rPillar);
-
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH + 2.2, 0.38, 0.38), neonBeamMat);
-      beam.position.set(0, 7.8, 0);
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(st.trackWidth + 2.0, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: step === 0 ? 0xff00ff : 0x00ffff }));
+      beam.position.set(0, 7.5, 0);
       archGroup.add(beam);
 
       scene.add(archGroup);
     });
 
-    // Giant neon directional turns arrows
-    const curveDirections = [
-      { step: 52, lookAngle: -Math.PI / 4 },
-      { step: 104, lookAngle: Math.PI / 2 },
-      { step: 260, lookAngle: 0 },
-      { step: 345, lookAngle: -Math.PI / 3 }
-    ];
+    // Particle generator
+    const spawnExhaustBubble = (pos, col = 0xff00cc) => {
+      const pMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 6, 6),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.65 })
+      );
+      pMesh.position.copy(pos);
+      scene.add(pMesh);
 
-    curveDirections.forEach((cd) => {
-      const p = TRACK_CURVE.getPointAt(cd.step / TOTAL_SPLINE_STEPS);
-      const tangent = TRACK_CURVE.getTangentAt(cd.step / TOTAL_SPLINE_STEPS);
-      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
-      
-      const billboardPos = p.clone().addScaledVector(normal, -TRACK_WIDTH / 2 - 4.2);
-      billboardPos.y = 3.6;
-
-      const arrowGeo = new THREE.BoxGeometry(3.5, 1.8, 0.2);
-      const arrowMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.82 });
-      const billboard = new THREE.Mesh(arrowGeo, arrowMat);
-      billboard.position.copy(billboardPos);
-      billboard.rotation.y = cd.lookAngle;
-      scene.add(billboard);
-    });
-
-    // 9. DYNAMIC EXHAUST PARTICLES SYSTEM
-    function spawnExhaustBubble(sourcePos, colorHex = 0xffffff) {
-      const pGeo = new THREE.SphereGeometry(0.08, 6, 6);
-      const pMat = new THREE.MeshBasicMaterial({
-        color: colorHex,
-        transparent: true,
-        opacity: 0.65
-      });
-      const mesh = new THREE.Mesh(pGeo, pMat);
-      mesh.position.copy(sourcePos);
-      
-      scene.add(mesh);
-      particleSystems.push({
-        mesh: mesh,
+      st.particleSystems.push({
+        mesh: pMesh,
         type: 'exhaust',
         velocity: new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.3 + Math.random() * 0.4, (Math.random() - 0.5) * 0.4),
         age: 0,
         maxAge: 0.42
       });
-    }
+    };
 
-    // Spark particles for drifting tires
-    function spawnDriftSparks(sourcePos, colorHex = 0xff53a0) {
-      const pGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
-      const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
-      const mesh = new THREE.Mesh(pGeo, pMat);
-      mesh.position.copy(sourcePos);
-      scene.add(mesh);
-      
-      particleSystems.push({
-        mesh: mesh,
+    const spawnDriftSparks = (pos, col = 0xff00ff) => {
+      const pMesh = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), new THREE.MeshBasicMaterial({ color: col }));
+      pMesh.position.copy(pos);
+      scene.add(pMesh);
+
+      st.particleSystems.push({
+        mesh: pMesh,
         type: 'spark',
-        velocity: new THREE.Vector3(
-          (Math.random() - 0.5) * 3.4,
-          1.2 + Math.random() * 2.2,
-          (Math.random() - 0.5) * 3.4
-        ),
+        velocity: new THREE.Vector3((Math.random() - 0.5) * 3.4, 1.2 + Math.random() * 2.2, (Math.random() - 0.5) * 3.4),
         age: 0,
         maxAge: 0.35
       });
-    }
+    };
 
-    // 10. DRIVING ANIMATION ENGINE LOOP
-    let lapCountChecked = 1;
-    gameStartTime = clock.getElapsedTime();
-    lapStartTime = gameStartTime;
-
-    function animate() {
-      animId = requestAnimationFrame(animate);
-      const dt = Math.min(0.03, clock.getDelta());
-
-      // Decrease Screen Shake
-      if (cameraShake > 0) cameraShake -= dt * 1.5;
-
-      // Update particle ages and movements
-      for (let i = particleSystems.length - 1; i >= 0; i--) {
-        const p = particleSystems[i];
-        p.age += dt;
-        p.mesh.position.addScaledVector(p.velocity, dt);
-
-        if (p.type === 'exhaust') {
-          // grow larger and fade out
-          p.mesh.scale.multiplyScalar(1.04);
-          p.mesh.material.opacity = 0.65 * (1 - p.age / p.maxAge);
-        } else if (p.type === 'spark') {
-          // fall back due to gravity
-          p.velocity.y -= 9.8 * dt;
-        }
-
-        if (p.age >= p.maxAge) {
-          scene.remove(p.mesh);
-          p.mesh.geometry.dispose();
-          p.mesh.material.dispose();
-          particleSystems.splice(i, 1);
-        }
-      }
-
-      // Track item rotators
-      trackItems.forEach((item) => {
-        if (!item.active) return;
-        if (item.type === 'coin') {
-          item.mesh.rotation.y += dt * 3.2;
-          item.mesh.position.y = 0.65 + Math.sin(clock.getElapsedTime() * 4) * 0.12;
-        } else if (item.type === 'crate') {
-          item.mesh.rotation.y += dt * 0.8;
-        }
-      });
-
-      // --- PLAYER PHYSICS LOOP ---
-      if (phaseRef.current === 'playing') {
-        // Spin Timer
-        if (playerPhysics.spinTimer > 0) {
-          playerPhysics.spinTimer -= dt;
-          playerPhysics.speed = Math.max(0, playerPhysics.speed - dt * 25);
-          mainKartGroup.rotation.y += dt * 14.5;
-        } 
-        else {
-          // Acceleration / Reverse
-          if (keys.w) {
-            const acc = playerPhysics.boostTimer > 0 ? 25 : 12;
-            const topSpd = playerPhysics.boostTimer > 0 ? 34 : 22;
-            playerPhysics.speed = Math.min(topSpd, playerPhysics.speed + acc * dt);
-          } else if (keys.s) {
-            playerPhysics.speed = Math.max(-10, playerPhysics.speed - 15 * dt);
-          } else {
-            // Friction decay
-            playerPhysics.speed -= playerPhysics.speed * 1.8 * dt;
-          }
-
-          // Steering Turn Rate
-          let steerFactor = 1.0;
-          if (Math.abs(playerPhysics.speed) < 2) steerFactor = 0.28; // slow turn
-          else if (playerPhysics.isDrifting) steerFactor = 1.55; // tight drift steering
-
-          if (keys.a) {
-            playerPhysics.angle += 2.2 * steerFactor * dt;
-            playerPhysics.driftSide = -1;
-          } else if (keys.d) {
-            playerPhysics.angle -= 2.2 * steerFactor * dt;
-            playerPhysics.driftSide = 1;
-          }
-
-          // Drift trigger Space key
-          if (keys.space && (keys.a || keys.d) && playerPhysics.speed > 10) {
-            playerPhysics.isDrifting = true;
-          } else {
-            playerPhysics.isDrifting = false;
-          }
-
-          // Visual Wheel orientation angles
-          mainKartWheels.forEach((wheel) => {
-            // Wheel spin matching velocity
-            wheel.mesh.rotation.x += (playerPhysics.speed * dt) / wheel.radius;
-            // Front steering angle
-            if (wheel.isFront) {
-              const targetSteer = keys.a ? 0.35 : keys.d ? -0.35 : 0;
-              wheel.mesh.rotation.y = THREE.MathUtils.lerp(wheel.mesh.rotation.y, targetSteer, dt * 10);
-            }
-          });
-
-          // Drift physics adjustment
-          if (playerPhysics.isDrifting) {
-            playerPhysics.driftAngle = THREE.MathUtils.lerp(playerPhysics.driftAngle, -playerPhysics.driftSide * 0.44, dt * 6);
-            
-            // Emit Drift Sparks dynamically
-            const leftRearWheel = mainKartWheels[2].mesh.localToWorld(new THREE.Vector3());
-            const rightRearWheel = mainKartWheels[3].mesh.localToWorld(new THREE.Vector3());
-            spawnDriftSparks(leftRearWheel, 0xff00ff);
-            spawnDriftSparks(rightRearWheel, 0x00ffff);
-          } else {
-            playerPhysics.driftAngle = THREE.MathUtils.lerp(playerPhysics.driftAngle, 0, dt * 8);
-          }
-
-          // Vector calculation
-          const finalHeading = playerPhysics.angle + playerPhysics.driftAngle;
-          const targetVelocity = new THREE.Vector3(Math.sin(finalHeading) * playerPhysics.speed, 0, Math.cos(finalHeading) * playerPhysics.speed);
-          
-          // Smooth slide interpolation
-          const slipFactor = playerPhysics.isDrifting ? 2.2 : 8.5;
-          playerPhysics.velocity.lerp(targetVelocity, dt * slipFactor);
-          playerPhysics.pos.addScaledVector(playerPhysics.velocity, dt);
-
-          // Tilt vehicle model slightly when steering/drifting
-          let rollAngle = 0;
-          if (keys.a) rollAngle = 0.08;
-          else if (keys.d) rollAngle = -0.08;
-          if (playerPhysics.isDrifting) rollAngle *= 2.2;
-          
-          mainKartGroup.children[0].rotation.z = THREE.MathUtils.lerp(mainKartGroup.children[0].rotation.z, rollAngle, dt * 10);
-
-          mainKartGroup.position.copy(playerPhysics.pos);
-          mainKartGroup.rotation.y = playerPhysics.angle + playerPhysics.driftAngle;
-        }
-
-        // Exhaust gas particle bubbles
-        if (Math.abs(playerPhysics.speed) > 1 && Math.random() < 0.35) {
-          const pipeOutlet = mainKartGroup.localToWorld(new THREE.Vector3(0.18, 0.68, 1.18));
-          spawnExhaustBubble(pipeOutlet, 0xff00cc);
-        }
-
-        // Boost countdown timer
-        if (playerPhysics.boostTimer > 0) {
-          playerPhysics.boostTimer -= dt;
-          if (Math.random() < 0.45) {
-            spawnExhaustBubble(mainKartGroup.localToWorld(new THREE.Vector3(0, 0.4, 1.0)), 0xffd166);
-          }
-        }
-
-        // --- BOUNDARIES ON/OFF TRACK DISTANCE CHECK ---
-        let minDistance = 9999;
-        let closestIndex = 0;
-        CURVE_POINTS.forEach((pt, idx) => {
-          const dist = playerPhysics.pos.distanceTo(pt);
-          if (dist < minDistance) {
-            minDistance = dist;
-            closestIndex = idx;
-          }
-        });
-
-        playerPhysics.splineProgressIndex = closestIndex;
-
-        // grass slow penalizer
-        const roadLimit = TRACK_WIDTH / 2;
-        if (minDistance > roadLimit) {
-          // Off-road grass limit max speed
-          const capSpeed = 5.2;
-          if (playerPhysics.speed > capSpeed) {
-            playerPhysics.speed = THREE.MathUtils.lerp(playerPhysics.speed, capSpeed, dt * 4);
-          }
-        }
-
-        // --- ITEM COLLISION HANDLERS ---
-        trackItems.forEach((item) => {
-          if (!item.active) return;
-          const dist = playerPhysics.pos.distanceTo(item.pos);
-          if (dist < item.radius) {
-            if (item.type === 'coin') {
-              item.active = false;
-              scene.remove(item.mesh);
-              playerPhysics.score += 150;
-              setScore(playerPhysics.score);
-            } 
-            else if (item.type === 'zipper') {
-              playerPhysics.boostTimer = 1.35;
-              playerPhysics.speed = 34; // boost zip speed
-              cameraShake = 0.28;
-            } 
-            else if (item.type === 'crate') {
-              item.active = false;
-              scene.remove(item.mesh);
-              playerPhysics.spinTimer = 0.65;
-              cameraShake = 0.55;
-            }
-          }
-        });
-
-        // --- CHECKPOINT AND LAP TRACKINGS ---
-        // Checkpoint placed at halfway index 200
-        if (closestIndex > 180 && closestIndex < 220) {
-          playerPhysics.checkpointPassed = true;
-        }
-
-        // Starting gate line placed around step 0
-        if (closestIndex > 385 && playerPhysics.checkpointPassed) {
-          playerPhysics.checkpointPassed = false;
-          const now = clock.getElapsedTime();
-          const lapTime = now - lapStartTime;
-          lapStartTime = now;
-          
-          currentLapTimes.push(lapTime.toFixed(2));
-          setLapTimes([...currentLapTimes]);
-
-          if (playerPhysics.lap >= 3) {
-            setPhase('over');
-          } else {
-            playerPhysics.lap += 1;
-            setLap(playerPhysics.lap);
-          }
-        }
-
-        setSpeed(Math.floor(playerPhysics.speed * 7));
-      }
-
-      // --- CPU AI COMPETITORS LOOP ---
-      rivals.forEach((ai) => {
-        if (phaseRef.current === 'playing') {
-          // Spin mechanics
-          if (ai.spinTimer > 0) {
-            ai.spinTimer -= dt;
-            ai.speed = Math.max(0, ai.speed - dt * 20);
-            ai.model.rotation.y += dt * 14.5;
-          } 
-          else {
-            // Find closest spline point to evaluate progress
-            let closestPtDist = 9999;
-            let aiClosestIdx = 0;
-            CURVE_POINTS.forEach((pt, idx) => {
-              const d = ai.pos.distanceTo(pt);
-              if (d < closestPtDist) {
-                closestPtDist = d;
-                aiClosestIdx = idx;
-              }
-            });
-            ai.splineProgressIndex = aiClosestIdx;
-
-            // Simple Waypoint target following
-            // target node lies 12 steps ahead on the loop
-            const targetSeg = (aiClosestIdx + 12) % TOTAL_SPLINE_STEPS;
-            const targetPt = CURVE_POINTS[targetSeg];
-
-            const dirToTarget = targetPt.clone().sub(ai.pos).normalize();
-            const headingAngle = Math.atan2(dirToTarget.x, dirToTarget.z);
-
-            // Steer interpolation
-            let angleDiff = headingAngle - ai.angle;
-            // angle wraparound correction
-            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-
-            ai.angle += THREE.MathUtils.clamp(angleDiff, -2.5 * dt, 2.5 * dt);
-
-            // target speed with minor random variance
-            const maxAISpeed = (16.2 + ai.skill * 4) * (closestPtDist > TRACK_WIDTH / 2 ? 0.35 : 1.0);
-            ai.speed = THREE.MathUtils.lerp(ai.speed, maxAISpeed, dt * 3);
-
-            ai.velocity.set(Math.sin(ai.angle) * ai.speed, 0, Math.cos(ai.angle) * ai.speed);
-            ai.pos.addScaledVector(ai.velocity, dt);
-
-            ai.model.position.copy(ai.pos);
-            ai.model.rotation.y = ai.angle;
-          }
-
-          // Spin wheel mesh
-          ai.wheels.forEach((wheel) => {
-            wheel.mesh.rotation.x += (ai.speed * dt) / wheel.radius;
-          });
-
-          // exhaust particles for CPU karts
-          if (Math.random() < 0.12) {
-            spawnExhaustBubble(ai.model.localToWorld(new THREE.Vector3(0.18, 0.68, 1.18)), ai.colorHex);
-          }
-
-          // CPU vs Player simple push collision
-          const collDist = ai.pos.distanceTo(playerPhysics.pos);
-          if (collDist < 1.62) {
-            const pushDir = playerPhysics.pos.clone().sub(ai.pos).normalize();
-            playerPhysics.velocity.addScaledVector(pushDir, ai.speed * 0.48);
-            ai.speed *= 0.65;
-            cameraShake = 0.35;
-          }
-
-          // CPU vs CPU push collisions
-          rivals.forEach((other) => {
-            if (other.name === ai.name) return;
-            const d = ai.pos.distanceTo(other.pos);
-            if (d < 1.62) {
-              const p = other.pos.clone().sub(ai.pos).normalize();
-              other.pos.addScaledVector(p, 0.18);
-              other.speed *= 0.7;
-              ai.speed *= 0.7;
-            }
-          });
-
-          // Crate collisions for CPU AI
-          trackItems.forEach((item) => {
-            if (!item.active || item.type !== 'crate') return;
-            const d = ai.pos.distanceTo(item.pos);
-            if (d < item.radius) {
-              item.active = false;
-              scene.remove(item.mesh);
-              ai.spinTimer = 0.6;
-            }
-          });
-
-          // Laps tracking for CPU AI
-          if (ai.splineProgressIndex > 180 && ai.splineProgressIndex < 220) {
-            ai.checkpointPassed = true;
-          }
-          if (ai.splineProgressIndex > 385 && ai.checkpointPassed) {
-            ai.checkpointPassed = false;
-            ai.lap += 1;
-          }
-        }
-      });
-
-      // --- DYNAMIC LEADERSTAND Standings TRACKINGS ---
-      // Calculate standings at every frame
-      const standings = [
-        { name: 'PLAYER', lap: playerPhysics.lap, progress: playerPhysics.splineProgressIndex, color: '#ff007f' },
-        ...rivals.map((ai) => ({
-          name: ai.name,
-          lap: ai.lap,
-          progress: ai.splineProgressIndex,
-          color: ai.colorHex === 0xffd166 ? '#ffd166' : ai.colorHex === 0x06b6d4 ? '#06b6d4' : '#10b981',
-        })),
-      ];
-
-      // Sort racers by: lap * 1000 + progress
-      standings.sort((a, b) => {
-        const scoreA = a.lap * 2000 + a.progress;
-        const scoreB = b.lap * 2000 + b.progress;
-        return scoreB - scoreA;
-      });
-
-      setLeaderboard(standings.map((r, i) => `${i + 1}. ${r.name} (L${r.lap})`));
-
-      const rankIndex = standings.findIndex((r) => r.name === 'PLAYER');
-      const rankings = ['1st', '2nd', '3rd', '4th'];
-      setRankText(rankings[rankIndex] || '4th');
-
-      // --- CHASE ENGINE CAMERA VIEW ---
-      if (mainKartGroup) {
-        // High stretch camera FOV during boosts
-        const targetFOV = playerPhysics.boostTimer > 0 ? 82 : 65;
-        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, dt * 5);
-        camera.updateProjectionMatrix();
-
-        // Calculate back coordinates offset matching yaw angle
-        const backOffset = -4.5;
-        const upOffset = 2.1;
-
-        const heading = playerPhysics.angle;
-        const idealCamPos = playerPhysics.pos.clone().add(new THREE.Vector3(
-          Math.sin(heading) * backOffset,
-          upOffset,
-          Math.cos(heading) * backOffset
-        ));
-
-        // Smooth camera lerp tracking
-        camera.position.lerp(idealCamPos, dt * 6.5);
-        
-        // Target target offset forward
-        const targetLook = playerPhysics.pos.clone().add(new THREE.Vector3(
-          Math.sin(heading) * 4.5,
-          0.8,
-          Math.cos(heading) * 4.5
-        ));
-
-        // Apply visual screen vibration offset
-        if (cameraShake > 0) {
-          camera.position.x += (Math.random() - 0.5) * cameraShake;
-          camera.position.y += (Math.random() - 0.5) * cameraShake;
-        }
-
-        camera.lookAt(targetLook);
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    animate();
-
-    // 11. KEYBOARD LISTENERS
+    // Keyboard bindings
+    const keys = st.keys;
     const onKeyDown = (e) => {
       const code = e.code;
       if (code === 'KeyW' || code === 'ArrowUp') keys.w = true;
       if (code === 'KeyS' || code === 'ArrowDown') keys.s = true;
       if (code === 'KeyA' || code === 'ArrowLeft') keys.a = true;
       if (code === 'KeyD' || code === 'ArrowRight') keys.d = true;
-      if (code === 'Space' || code === 'ShiftLeft') keys.space = true;
+      if (code === 'Space') keys.space = true;
+      if (code === 'ShiftLeft' || code === 'KeyE') triggerPowerup();
     };
 
     const onKeyUp = (e) => {
@@ -1000,302 +1000,707 @@ export default function Racing() {
       if (code === 'KeyS' || code === 'ArrowDown') keys.s = false;
       if (code === 'KeyA' || code === 'ArrowLeft') keys.a = false;
       if (code === 'KeyD' || code === 'ArrowRight') keys.d = false;
-      if (code === 'Space' || code === 'ShiftLeft') keys.space = false;
+      if (code === 'Space') keys.space = false;
     };
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
-    // Dynamic resize
-    const onResize = () => {
-      if (!containerRef.current) return;
-      const w = containerRef.current.clientWidth;
-      const h = containerRef.current.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener('resize', onResize);
+    // Initial countdown start
+    if (st.isHost) {
+      setTimeout(() => startRaceCountdown(), 1500);
+    }
 
-    // 12. EXPOSED hooks restart/cleanup
-    stateRef.current.restart = () => {
-      // Clean and reset physics
-      playerPhysics = {
-        pos: new THREE.Vector3(0, 0, 5),
-        angle: Math.PI * 0.9,
-        speed: 0,
-        velocity: new THREE.Vector3(),
-        driftAngle: 0,
-        isDrifting: false,
-        driftSide: 0,
-        boostTimer: 0,
-        spinTimer: 0,
-        lap: 1,
-        checkpointPassed: false,
-        splineProgressIndex: 0,
-        score: 0,
-      };
+    // Animation engine loop
+    function animate() {
+      st.animId = requestAnimationFrame(animate);
+      const dt = Math.min(0.03, clock.getDelta());
+      let cameraShake = st.cameraShake;
 
-      setLap(1);
-      setScore(0);
-      setSpeed(0);
-      setLapTimes([]);
-      currentLapTimes = [];
+      if (st.cameraShake > 0) st.cameraShake -= dt * 1.5;
 
-      mainKartGroup.position.copy(playerPhysics.pos);
-      mainKartGroup.rotation.y = playerPhysics.angle;
+      // Update particles
+      for (let i = st.particleSystems.length - 1; i >= 0; i--) {
+        const p = st.particleSystems[i];
+        p.age += dt;
+        p.mesh.position.addScaledVector(p.velocity, dt);
+        if (p.type === 'exhaust') {
+          p.mesh.scale.multiplyScalar(1.04);
+          p.mesh.material.opacity = 0.65 * (1 - p.age / p.maxAge);
+        } else if (p.type === 'spark') {
+          p.velocity.y -= 9.8 * dt;
+        }
+        if (p.age >= p.maxAge) {
+          scene.remove(p.mesh);
+          st.particleSystems.splice(i, 1);
+        }
+      }
 
-      // Re-place AI rivals
-      rivals.forEach((ai, idx) => {
-        const startSeg = 4;
-        const startPt = TRACK_CURVE.getPointAt(startSeg / TOTAL_SPLINE_STEPS);
-        const tangent = TRACK_CURVE.getTangentAt(startSeg / TOTAL_SPLINE_STEPS);
-        const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
-        const aiPos = startPt.clone().addScaledVector(normal, RIVAL_CONFIGS[idx].startOffset);
-
-        ai.pos.copy(aiPos);
-        ai.angle = Math.PI * 0.9;
-        ai.speed = 0;
-        ai.lap = 1;
-        ai.checkpointPassed = false;
-        ai.splineProgressIndex = startSeg;
-        ai.spinTimer = 0;
-
-        ai.model.position.copy(aiPos);
-        ai.model.rotation.y = ai.angle;
+      // Rotate item boxes
+      st.powerupBoxes.forEach((item) => {
+        if (item.type === 'zipper') return;
+        if (!item.active) {
+          if (st.isHost) {
+            item.respawnTimer -= dt;
+            if (item.respawnTimer <= 0) {
+              item.active = true;
+              item.mesh.visible = true;
+            }
+          }
+          return;
+        }
+        item.mesh.rotation.y += dt * 2.2;
+        item.mesh.position.y = (st.trackCurve.getPointAt(parseInt(item.id.split('_')[1]) / TOTAL_SPLINE_STEPS).y + 0.6) + Math.sin(clock.getElapsedTime() * 4) * 0.12;
       });
 
-      // Reset and recreate items
-      trackItems.forEach((item) => {
-        scene.remove(item.mesh);
-      });
-      trackItems = [];
+      // Update projectiles (shells) physics
+      for (let i = st.projectiles.length - 1; i >= 0; i--) {
+        const p = st.projectiles[i];
+        p.age += dt;
 
-      spawnPositions.forEach((sp) => {
-        const p = TRACK_CURVE.getPointAt(sp.step / TOTAL_SPLINE_STEPS);
-        const tangent = TRACK_CURVE.getTangentAt(sp.step / TOTAL_SPLINE_STEPS);
-        const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
-        const pos = p.clone().addScaledVector(normal, sp.side);
-        pos.y = 0.05;
-
-        let itemMesh;
-        if (sp.type === 'zipper') {
-          const shape = new THREE.BufferGeometry();
-          const pts = [
-            new THREE.Vector3(0, 0.02, -0.9),
-            new THREE.Vector3(-0.9, 0.02, 0.5),
-            new THREE.Vector3(-0.4, 0.02, 0.5),
-            new THREE.Vector3(-0.4, 0.02, 0.9),
-            new THREE.Vector3(0.4, 0.02, 0.9),
-            new THREE.Vector3(0.4, 0.02, 0.5),
-            new THREE.Vector3(0.9, 0.02, 0.5)
-          ];
-          shape.setFromPoints(pts);
-          const zipperIndices = [0, 1, 6, 2, 3, 4, 2, 4, 5];
-          shape.setIndex(zipperIndices);
-          shape.computeVertexNormals();
-
-          const zipMat = new THREE.MeshBasicMaterial({ color: 0xffd166, side: THREE.DoubleSide });
-          itemMesh = new THREE.Mesh(shape, zipMat);
-          itemMesh.position.copy(pos);
-          itemMesh.lookAt(pos.clone().add(tangent));
-          scene.add(itemMesh);
-        } else if (sp.type === 'coin') {
-          const coinGeo = new THREE.DodecahedronGeometry(0.44, 0);
-          const coinMat = new THREE.MeshStandardMaterial({
-            color: 0xffd166,
-            emissive: 0xffa800,
-            emissiveIntensity: 0.35,
-            roughness: 0.15,
-            metalness: 0.95
-          });
-          itemMesh = new THREE.Mesh(coinGeo, coinMat);
-          itemMesh.position.copy(pos);
-          itemMesh.position.y = 0.65;
-          scene.add(itemMesh);
-        } else if (sp.type === 'crate') {
-          const crateGeo = new THREE.BoxGeometry(0.85, 0.85, 0.85);
-          const crateMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.52 });
-          itemMesh = new THREE.Mesh(crateGeo, crateMat);
-          itemMesh.position.copy(pos);
-          itemMesh.position.y = 0.44;
-          itemMesh.castShadow = true;
-          scene.add(itemMesh);
-
-          const outline = new THREE.LineSegments(
-            new THREE.EdgesGeometry(crateGeo),
-            new THREE.LineBasicMaterial({ color: 0xffa000, linewidth: 2 })
-          );
-          itemMesh.add(outline);
+        if (p.type === 'green') {
+          // Travel forward along straight line
+          p.mesh.position.addScaledVector(p.vel, dt);
+        } else if (p.type === 'red') {
+          // Homing shell towards target kart
+          const targetKart = st.karts[p.targetIdx];
+          if (targetKart) {
+            const dir = targetKart.pos.clone().sub(p.mesh.position).normalize();
+            p.mesh.position.addScaledVector(dir, 25 * dt); // speed 25
+          } else {
+            // normal travel if no target
+            p.mesh.position.y -= 5 * dt;
+          }
         }
 
-        trackItems.push({
-          type: sp.type,
-          mesh: itemMesh,
-          pos: pos,
-          radius: sp.type === 'zipper' ? 1.6 : 0.9,
-          active: true,
+        // Raycast check collision with all karts
+        let shellHit = false;
+        st.karts.forEach((k) => {
+          if (k.spinTimer > 0) return;
+          const dist = p.mesh.position.distanceTo(k.pos);
+          if (dist < 1.6) {
+            shellHit = true;
+            k.spinTimer = 1.2;
+            k.speed *= 0.25;
+            playBeep(200, 0.3);
+          }
+        });
+
+        // boundary check or expiration
+        if (shellHit || p.age >= 6.0) {
+          scene.remove(p.mesh);
+          st.projectiles.splice(i, 1);
+        }
+      }
+
+      // Authoritative physics loop
+      st.karts.forEach((k) => {
+        // Decrease shrink lightning effects
+        if (k.shrinkTimer > 0) {
+          k.shrinkTimer -= dt;
+          if (k.shrinkTimer <= 0) {
+            k.scale = 1.0;
+            k.modelGroup.scale.set(1.0, 1.0, 1.0);
+          }
+        }
+
+        if (k.isLocalHuman) {
+          // --- LOCAL PLAYER CONTROLS ---
+          if (st.matchStarted) {
+            if (k.spinTimer > 0) {
+              k.spinTimer -= dt;
+              k.speed = Math.max(0, k.speed - dt * 25);
+              k.modelGroup.rotation.y += dt * 14.5;
+            } else {
+              // Accelerator / Reverse
+              if (keys.w) {
+                const acc = k.boostTimer > 0 ? 25 : 12;
+                const topSpd = (k.boostTimer > 0 ? 34 : 22) * k.scale;
+                k.speed = Math.min(topSpd, k.speed + acc * dt);
+              } else if (keys.s) {
+                k.speed = Math.max(-10, k.speed - 15 * dt);
+              } else {
+                k.speed -= k.speed * 1.8 * dt;
+              }
+
+              let steer = 1.0;
+              if (Math.abs(k.speed) < 2) steer = 0.28;
+              else if (k.isDrifting) steer = 1.55;
+
+              if (keys.a) {
+                k.angle += 2.2 * steer * dt; k.driftSide = -1;
+              } else if (keys.d) {
+                k.angle -= 2.2 * steer * dt; k.driftSide = 1;
+              }
+
+              // Drifting trigger
+              if (keys.space && (keys.a || keys.d) && k.speed > 10) {
+                k.isDrifting = true;
+              } else {
+                k.isDrifting = false;
+              }
+
+              // Steering animation
+              k.wheelsList.forEach((w) => {
+                w.mesh.rotation.x += (k.speed * dt) / w.radius;
+                if (w.isFront) {
+                  const targetSteer = keys.a ? 0.35 : keys.d ? -0.35 : 0;
+                  w.mesh.rotation.y = THREE.MathUtils.lerp(w.mesh.rotation.y, targetSteer, dt * 10);
+                }
+              });
+
+              if (k.isDrifting) {
+                k.driftAngle = THREE.MathUtils.lerp(k.driftAngle, -k.driftSide * 0.44, dt * 6);
+                spawnDriftSparks(k.modelGroup.position, '#ff00ff');
+              } else {
+                k.driftAngle = THREE.MathUtils.lerp(k.driftAngle, 0, dt * 8);
+              }
+
+              const heading = k.angle + k.driftAngle;
+              const targetVel = new THREE.Vector3(Math.sin(heading) * k.speed, 0, Math.cos(heading) * k.speed);
+              const slip = k.isDrifting ? 2.2 : 8.5;
+              k.velocity.lerp(targetVel, dt * slip);
+              k.pos.addScaledVector(k.velocity, dt);
+
+              k.modelGroup.position.copy(k.pos);
+              k.modelGroup.rotation.y = k.angle + k.driftAngle;
+            }
+
+            if (k.boostTimer > 0) {
+              k.boostTimer -= dt;
+            }
+
+            // Off-track slow penalizer
+            let minDist = 9999;
+            let closestIdx = 0;
+            st.curvePoints.forEach((pt, idx) => {
+              const d = k.pos.distanceTo(pt);
+              if (d < minDist) { minDist = d; closestIdx = idx; }
+            });
+            k.splineProgressIndex = closestIdx;
+
+            // Spa Eau Rouge rise elevations interpolation
+            k.pos.y = st.curvePoints[closestIdx].y + 0.28;
+            k.modelGroup.position.y = k.pos.y;
+
+            if (minDist > st.trackWidth / 2) {
+              const grassCap = 5.2;
+              if (k.speed > grassCap) k.speed = THREE.MathUtils.lerp(k.speed, grassCap, dt * 4);
+            }
+
+            // Powerup boxes collisions check
+            st.powerupBoxes.forEach((item) => {
+              if (!item.active) return;
+              const d = k.pos.distanceTo(item.pos);
+              if (d < item.radius) {
+                if (item.type === 'zipper') {
+                  k.boostTimer = 1.35;
+                  k.speed = 34; // boost zip speed
+                  st.cameraShake = 0.28;
+                } else {
+                  // question mark item box
+                  item.active = false;
+                  item.mesh.visible = false;
+                  item.respawnTimer = 5.0; // 5s respawn
+                  
+                  if (!k.activePowerup) {
+                    const powerups = ['mushroom', 'banana', 'green_shell', 'red_shell', 'lightning'];
+                    const chosen = powerups[Math.floor(Math.random() * powerups.length)];
+                    k.activePowerup = chosen;
+                    setActivePowerup(chosen);
+                    playBeep(600, 0.1);
+                  }
+                }
+              }
+            });
+
+            // Lap updates
+            if (closestIdx > 180 && closestIdx < 220) k.checkpointPassed = true;
+            if (closestIdx > 385 && k.checkpointPassed) {
+              k.checkpointPassed = false;
+              const now = clock.getElapsedTime();
+              const lapTime = now - st.lapStartTime;
+              st.lapStartTime = now;
+              
+              st.currentLapTimes.push(lapTime.toFixed(2));
+              setLapTimes([...st.currentLapTimes]);
+
+              if (k.lap >= 3) {
+                setPhase('over');
+              } else {
+                k.lap += 1;
+                setLap(k.lap);
+              }
+            }
+
+            setSpeed(Math.floor(k.speed * 7));
+          }
+        } else {
+          // --- CPU AI PATH FOLLOWING (Simulated only on Host authority) ---
+          if (st.isHost && st.matchStarted) {
+            if (k.spinTimer > 0) {
+              k.spinTimer -= dt;
+              k.speed = Math.max(0, k.speed - dt * 20);
+              k.modelGroup.rotation.y += dt * 14.5;
+            } else {
+              let minDist = 9999;
+              let closestIdx = 0;
+              st.curvePoints.forEach((pt, idx) => {
+                const d = k.pos.distanceTo(pt);
+                if (d < minDist) { minDist = d; closestIdx = idx; }
+              });
+              k.splineProgressIndex = closestIdx;
+
+              const targetSeg = (closestIdx + 12) % TOTAL_SPLINE_STEPS;
+              const targetPt = st.curvePoints[targetSeg];
+
+              const dir = targetPt.clone().sub(k.pos).normalize();
+              const headingAngle = Math.atan2(dir.x, dir.z);
+
+              let angleDiff = headingAngle - k.angle;
+              while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+              while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+
+              k.angle += THREE.MathUtils.clamp(angleDiff, -2.5 * dt, 2.5 * dt);
+
+              // Max speed
+              const targetSpd = (16.2 + k.skill * 4) * (minDist > st.trackWidth / 2 ? 0.35 : 1.0) * k.scale;
+              k.speed = THREE.MathUtils.lerp(k.speed, targetSpd, dt * 3);
+
+              k.velocity.set(Math.sin(k.angle) * k.speed, 0, Math.cos(k.angle) * k.speed);
+              k.pos.addScaledVector(k.velocity, dt);
+              
+              k.pos.y = st.curvePoints[closestIdx].y + 0.28;
+              k.modelGroup.position.copy(k.pos);
+              k.modelGroup.rotation.y = k.angle;
+
+              // AI use powerups automatically
+              if (k.activePowerup) {
+                k.activePowerup = null; // consume
+                if (Math.random() < 0.25) {
+                  // mushroom boost
+                  k.boostTimer = 1.5;
+                  k.speed += 8;
+                }
+              }
+            }
+
+            k.wheelsList.forEach((w) => {
+              w.mesh.rotation.x += (k.speed * dt) / w.radius;
+            });
+
+            // CPU item box collisions on Host
+            st.powerupBoxes.forEach((item) => {
+              if (!item.active || item.type === 'zipper') return;
+              const d = k.pos.distanceTo(item.pos);
+              if (d < item.radius) {
+                item.active = false;
+                item.mesh.visible = false;
+                item.respawnTimer = 5.0;
+                k.activePowerup = 'mushroom';
+              }
+            });
+
+            // Lap counters CPU
+            if (k.splineProgressIndex > 180 && k.splineProgressIndex < 220) k.checkpointPassed = true;
+            if (k.splineProgressIndex > 385 && k.checkpointPassed) {
+              k.checkpointPassed = false;
+              k.lap += 1;
+            }
+          }
+        }
+
+        // Exhaust bubbles
+        if (Math.abs(k.speed) > 1 && Math.random() < 0.15) {
+          spawnExhaustBubble(k.modelGroup.position, k.color);
+        }
+
+        // Collision logic push back
+        st.karts.forEach((other) => {
+          if (other.index === k.index) return;
+          const dist = k.pos.distanceTo(other.pos);
+          if (dist < 1.6) {
+            const push = k.pos.clone().sub(other.pos).normalize();
+            if (k.isLocalHuman) {
+              k.velocity.addScaledVector(push, 8.5);
+              st.cameraShake = 0.25;
+            } else {
+              k.pos.addScaledVector(push, 0.1);
+            }
+            k.speed *= 0.7;
+          }
         });
       });
 
-      // Reset particles
-      particleSystems.forEach((p) => scene.remove(p.mesh));
-      particleSystems = [];
+      // Update deployed banana hazards spinouts
+      st.hazards.forEach((hazard) => {
+        if (!hazard.active) return;
+        st.karts.forEach((k) => {
+          if (k.spinTimer > 0) return;
+          const dist = k.pos.distanceTo(hazard.pos);
+          if (dist < hazard.radius) {
+            hazard.active = false;
+            scene.remove(hazard.mesh);
+            k.spinTimer = 1.2; // spin-out 1.2s
+            k.speed *= 0.25;
+            playBeep(200, 0.3);
+          }
+        });
+      });
 
-      lapStartTime = clock.getElapsedTime();
-      setPhase('playing');
-    };
+      // standings rankings updates
+      const standings = getRacerStandingsList();
+      setLeaderboard(standings.map((r, i) => `${i + 1}. ${r.name} (L${r.lap})`));
 
-    stateRef.current.cleanup = () => {
+      const rankIndex = standings.findIndex(r => r.index === st.playerIndex);
+      const rankings = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th', '13th', '14th', '15th', '16th'];
+      setRankText(rankings[rankIndex] || '16th');
+
+      // Chase camera
+      const player = st.karts[st.playerIndex];
+      if (player) {
+        const targetFOV = player.boostTimer > 0 ? 82 : 65;
+        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, dt * 5);
+        camera.updateProjectionMatrix();
+
+        const heading = player.angle + player.driftAngle;
+        const idealCam = player.pos.clone().add(new THREE.Vector3(
+          Math.sin(heading) * -4.5,
+          2.1,
+          Math.cos(heading) * -4.5
+        ));
+        camera.position.lerp(idealCam, dt * 6.5);
+        
+        const targetLook = player.pos.clone().add(new THREE.Vector3(Math.sin(heading) * 4.5, 0.8, Math.cos(heading) * 4.5));
+        
+        if (st.cameraShake > 0) {
+          camera.position.x += (Math.random() - 0.5) * st.cameraShake;
+          camera.position.y += (Math.random() - 0.5) * st.cameraShake;
+        }
+        camera.lookAt(targetLook);
+      }
+
+      // NetworkAuthoritative broadcast syncs
+      broadcastSyncAll();
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('resize', onResize);
-      cancelAnimationFrame(animId);
-
-      // Dispose Three geometries and materials
+      cancelAnimationFrame(st.animId);
+      
       scene.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
-          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
           else obj.material.dispose();
         }
       });
-
       renderer.dispose();
       if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
         containerRef.current.removeChild(renderer.domElement);
       }
     };
+  }, [phase]);
 
-    return () => {
-      stateRef.current.cleanup?.();
-    };
-  }, []);
+  const copyRoomCode = () => {
+    navigator.clipboard.writeText(roomCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const exitMatch = () => {
+    cleanupPeer();
+    setPhase('menu');
+  };
 
   return (
-    <div className="racing-root relative overflow-hidden bg-[#05020c]">
-      {/* 3D Canvas Box */}
-      <div ref={containerRef} className="racing-container w-full h-full" />
-
-      {/* Main Menu Overlay */}
+    <div className="racing-root">
+      
+      {/* ──────────────── MAIN MENU ──────────────── */}
       {phase === 'menu' && (
-        <div className="racing-overlay absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20 font-mono text-center px-4">
-          <span className="text-xs text-pink-500 tracking-[0.4em]">// 3D_GO_KART_GRAND_PRIX</span>
-          <h1 className="text-4xl md:text-6xl font-black uppercase text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-400 mt-2 mb-4 drop-shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-            Kart Racer 3D
-          </h1>
-          
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 max-w-md mb-8 text-left text-sm text-gray-300 backdrop-blur-md shadow-2xl">
-            <h3 className="text-cyan-400 font-bold mb-2 uppercase tracking-wider">// DRIVER MANUAL</h3>
-            <ul className="space-y-1.5 list-disc list-inside">
-              <li>STEER: <b className="text-white">A / D</b> or <b className="text-white">← / →</b> keys</li>
-              <li>ACCELERATE: <b className="text-white">W</b> or <b className="text-white">↑ Arrow</b></li>
-              <li>BRAKE / REVERSE: <b className="text-white">S</b> or <b className="text-white">↓ Arrow</b></li>
-              <li>DRIFT: <b className="text-white">SPACEBAR</b> while turning hard at speed</li>
-              <li className="text-pink-400">Drift past track edge limits onto grass to avoid wall crash!</li>
-              <li className="text-yellow-400">Drive over yellow ZIPPERS for Speed Boosts!</li>
-            </ul>
+        <div className="racing-lobby-overlay">
+          <div className="racing-lobby-box">
+            <h1>Go-Kart Grand Prix</h1>
+            <div className="racing-lobby-sub">// 3D MULTIPLAYER RACING</div>
+
+            <div className="racing-select-section">
+              <label>Select Track</label>
+              <div className="racing-options-grid">
+                <div className={`racing-option-card ${selectedTrack === 'monza' ? 'active' : ''}`} onClick={() => setSelectedTrack('monza')}>
+                  <div className="racing-card-title">Monza</div>
+                  <div className="racing-card-desc">High-speed straights & chicanes</div>
+                </div>
+                <div className={`racing-option-card ${selectedTrack === 'spa' ? 'active' : ''}`} onClick={() => setSelectedTrack('spa')}>
+                  <div className="racing-card-title">Spa</div>
+                  <div className="racing-card-desc">Eau Rouge elevation curves</div>
+                </div>
+                <div className={`racing-option-card ${selectedTrack === 'brands' ? 'active' : ''}`} onClick={() => setSelectedTrack('brands')}>
+                  <div className="racing-card-title">Brands Hatch</div>
+                  <div className="racing-card-desc">Winding, technical hills</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="racing-select-section">
+              <label>Game Mode</label>
+              <div className="racing-options-grid">
+                <div className={`racing-option-card ${selectedMode === 'gp' ? 'active' : ''}`} onClick={() => setSelectedMode('gp')}>
+                  <div className="racing-card-title">Grand Prix</div>
+                  <div className="racing-card-desc">Race against 15 CPU drivers</div>
+                </div>
+                <div className={`racing-option-card ${selectedMode === 'tt' ? 'active' : ''}`} onClick={() => setSelectedMode('tt')}>
+                  <div className="racing-card-title">Time Trial</div>
+                  <div className="racing-card-desc">Solo lap records training</div>
+                </div>
+                <div className={`racing-option-card ${selectedMode === 'mp' ? 'active' : ''}`} onClick={() => setSelectedMode('mp')}>
+                  <div className="racing-card-title">Multiplayer</div>
+                  <div className="racing-card-desc">WebRTC P2P hosting rooms</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="racing-select-section">
+              <label>Kart Paint Finish</label>
+              <div className="racing-color-options">
+                {['#ff007f', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'].map(col => (
+                  <button
+                    key={col}
+                    className={`racing-color-btn ${kartColor === col ? 'active' : ''}`}
+                    style={{ backgroundColor: col }}
+                    onClick={() => setKartColor(col)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="racing-action-btns">
+              {selectedMode === 'mp' ? (
+                <>
+                  <button className="racing-btn" onClick={createRoom}>
+                    Host Lobby Room
+                  </button>
+                  <button className="racing-btn secondary" onClick={() => setPhase('join_input')}>
+                    Join Lobby Room
+                  </button>
+                </>
+              ) : (
+                <button className="racing-btn" onClick={() => setPhase('playing')}>
+                  Start Solo Race
+                </button>
+              )}
+            </div>
           </div>
-          <button
-            onClick={(e) => {
-              e.currentTarget.blur();
-              setPhase('playing');
-              stateRef.current.restart?.();
-            }}
-            className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold tracking-widest uppercase rounded-xl transition-all duration-300 shadow-[0_0_25px_rgba(236,72,153,0.4)] hover:scale-105 active:scale-95"
-          >
-            ENGAGE ENGINES [SPACE]
-          </button>
+          <BackButton />
         </div>
       )}
 
-      {/* Main HUD overlay during gameplay */}
-      {phase === 'playing' && (
-        <>
-          {/* Standing List on left side */}
-          <div className="absolute top-6 left-6 flex flex-col gap-2 z-20 font-mono pointer-events-none max-w-xs w-full">
-            <div className="bg-black/60 border border-white/10 p-3 rounded-2xl backdrop-blur-md shadow-lg">
-              <span className="text-[10px] text-pink-500 font-black tracking-widest block mb-2 uppercase">// RACERS STANDINGS</span>
-              <div className="space-y-1 text-sm">
-                {leaderboard.map((r, i) => (
-                  <div key={i} className={`flex justify-between ${r.includes('PLAYER') ? 'text-pink-400 font-black' : 'text-gray-300'}`}>
-                    <span>{r}</span>
+      {/* ──────────────── JOIN LOBBY INPUT ──────────────── */}
+      {phase === 'join_input' && (
+        <div className="racing-lobby-overlay">
+          <div className="racing-lobby-box">
+            <h1>Join Race Room</h1>
+            <div className="racing-lobby-sub">// ESTABLISH WEBRTC CHANNEL</div>
+
+            <div className="racing-join-section">
+              <label>Room Encryption Key</label>
+              <input
+                className="racing-input-code"
+                maxLength={6}
+                value={joinInput}
+                onChange={(e) => setJoinInput(e.target.value.toUpperCase())}
+                placeholder="ABCDEF"
+                autoFocus
+              />
+            </div>
+
+            <div className="racing-action-btns">
+              <button className="racing-btn" onClick={joinRoom}>
+                Connect to Host
+              </button>
+              <button className="racing-btn secondary" onClick={() => setPhase('menu')}>
+                Cancel
+              </button>
+            </div>
+            {peerErr && <div className="racing-error">{peerErr}</div>}
+          </div>
+          <BackButton />
+        </div>
+      )}
+
+      {/* ──────────────── MULTIPLAYER LOBBY SCREEN ──────────────── */}
+      {phase === 'lobby' && (
+        <div className="racing-lobby-overlay">
+          <div className="racing-lobby-box">
+            <h1>Karting Room</h1>
+            <div className="racing-lobby-sub">// LOBBY ROSTER LIST</div>
+
+            <div className="racing-lobby-peers">
+              <div className="racing-lobby-peers-title">Drivers Connected</div>
+              <div className="racing-lobby-peers-list">
+                {lobbyPeers.map((p, idx) => (
+                  <div key={idx} className="racing-peer-row">
+                    <span style={{ color: p.color }}>● {p.name}</span>
+                    <span>READY</span>
                   </div>
                 ))}
               </div>
             </div>
-            
-            {/* Laps time list */}
-            {lapTimes.length > 0 && (
-              <div className="bg-black/60 border border-white/10 p-3 rounded-2xl backdrop-blur-md text-xs text-cyan-400 space-y-0.5">
-                <span className="font-bold text-white uppercase block mb-1 text-[10px] tracking-wider">LAP TIMES</span>
-                {lapTimes.map((lt, idx) => (
-                  <div key={idx}>Lap {idx + 1}: {lt}s</div>
+
+            <div className="racing-action-btns">
+              {stateRef.current.isHost ? (
+                <button className="racing-btn" onClick={triggerStartMatch}>
+                  Start Grid Race
+                </button>
+              ) : (
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px' }}>
+                  Waiting for Host to start match...
+                </div>
+              )}
+              <button className="racing-btn secondary" onClick={exitMatch}>
+                Exit Room
+              </button>
+            </div>
+
+            <div className="racing-hud-room-code" style={{ position: 'relative', top: 'auto', left: 'auto', display: 'inline-flex', marginTop: '20px' }}>
+              <span className="racing-hud-code-lbl">ROOM:</span>
+              <span className="racing-hud-code-val">{roomCode}</span>
+              <button className={`racing-copy-btn ${copied ? 'copied' : ''}`} onClick={copyRoomCode}>
+                {copied ? 'COPIED!' : 'COPY'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────── GAMEPLAY RENDER ──────────────── */}
+      {phase === 'playing' && (
+        <>
+          {/* Three.js viewport */}
+          <div ref={containerRef} className="racing-container" />
+
+          {/* In-Game HUD elements */}
+          <div className="racing-hud-container">
+            {/* Top Left Cards */}
+            <div className="racing-hud-top-left">
+              <button className="racing-exit-btn" onClick={exitMatch}>
+                ← Exit Race
+              </button>
+              <div className="racing-hud-card">
+                <div className="racing-hud-label">LAP COUNT</div>
+                <div className="racing-hud-val">{lap}<span> / 3</span></div>
+              </div>
+            </div>
+
+            {/* Top Center Powerup Icon Display */}
+            {selectedMode !== 'tt' && (
+              <>
+                <div className={`racing-powerup-slot ${activePowerup ? 'has-item' : ''}`}>
+                  {activePowerup === 'mushroom' && '🍄'}
+                  {activePowerup === 'banana' && '🍌'}
+                  {activePowerup === 'green_shell' && '🟢'}
+                  {activePowerup === 'red_shell' && '🔴'}
+                  {activePowerup === 'lightning' && '⚡'}
+                </div>
+                {activePowerup && (
+                  <div className="racing-powerup-hint">
+                    Press SHIFT or E to activate
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Top Right Leaderboard standings */}
+            {selectedMode !== 'tt' && (
+              <div className="racing-hud-standings">
+                <div className="racing-standings-title">STANDINGS</div>
+                {leaderboard.slice(0, 8).map((r, idx) => (
+                  <div
+                    key={idx}
+                    className={`racing-standing-row ${r.includes('PLAYER') ? 'local-player' : ''}`}
+                  >
+                    {r}
+                  </div>
                 ))}
               </div>
             )}
-          </div>
 
-          {/* Center/Right Dynamic HUD stats */}
-          <div className="absolute top-6 right-6 flex flex-col items-end gap-3 z-20 font-mono pointer-events-none">
-            {/* Dynamic Rank Standings badges */}
-            <div className="flex items-center gap-2">
-              <div className="bg-black/60 border border-pink-500/20 px-5 py-2.5 rounded-2xl backdrop-blur-md shadow-lg text-right">
-                <div className="text-[9px] text-pink-400 tracking-wider">CURRENT RANK</div>
-                <div className="text-4xl font-black text-white">{rankText}</div>
-              </div>
+            {/* Bottom Left Standings positions / Laps list */}
+            <div className="racing-hud-bottom-left">
+              {selectedMode !== 'tt' && (
+                <div className="racing-position-indicator">
+                  {rankText}
+                </div>
+              )}
+              {lapTimes.length > 0 && (
+                <div className="racing-lap-times-list">
+                  <div style={{ fontWeight: '800', marginBottom: '3px' }}>LAP TIMES</div>
+                  {lapTimes.map((lt, idx) => (
+                    <div key={idx}>Lap {idx + 1}: {lt}s</div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-              <div className="bg-black/60 border border-cyan-500/20 px-5 py-2.5 rounded-2xl backdrop-blur-md shadow-lg text-right">
-                <div className="text-[9px] text-cyan-400 tracking-wider">LAP</div>
-                <div className="text-4xl font-black text-white">{lap}<span className="text-lg text-gray-500">/3</span></div>
+            {/* Bottom Right speedometer */}
+            <div className="racing-hud-bottom-right">
+              <div className="racing-speedometer-card">
+                <div className="racing-speed-val">{speed}</div>
+                <div className="racing-speed-unit">KM/H</div>
               </div>
             </div>
 
-            {/* Speeds and Scores dashboard widgets */}
-            <div className="flex gap-2">
-              <div className="bg-black/60 border border-white/5 px-4 py-2 rounded-xl backdrop-blur-md text-right text-sm text-yellow-400">
-                SCORE: {score}
+            {/* Traffic Lights Countdown Overlay */}
+            {countdownState >= 0 && (
+              <div className="racing-traffic-lights-overlay">
+                <div className="racing-traffic-lights-box">
+                  <div className={`racing-light-bulb red ${countdownState >= 3 ? 'active' : ''}`} />
+                  <div className={`racing-light-bulb orange ${countdownState >= 2 ? 'active' : ''}`} />
+                  <div className={`racing-light-bulb green ${countdownState >= 1 ? 'active' : ''}`} />
+                </div>
               </div>
-              <div className="bg-black/60 border border-white/5 px-4 py-2 rounded-xl backdrop-blur-md text-right text-sm text-cyan-400">
-                SPEED: {speed} KM/H
+            )}
+
+            {/* Dramatic GO Banner */}
+            {showGoBanner && (
+              <div className="racing-go-banner">
+                <h1>GO!</h1>
               </div>
-            </div>
+            )}
           </div>
         </>
       )}
 
-      {/* Finished Standings Podium screen */}
+      {/* ──────────────── GAME OVER / PODIUM ──────────────── */}
       {phase === 'over' && (
-        <div className="racing-gameover absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#06030c]/95 border border-pink-500/30 p-8 md:p-12 rounded-3xl text-center z-30 font-mono shadow-[0_0_60px_rgba(236,72,153,0.2)] max-w-sm w-full">
-          <span className="text-[10px] text-pink-500 tracking-[0.4em]">// SESSION_COMPLETED</span>
-          <h2 className="text-3xl font-black text-white mt-2 mb-4 uppercase">RACE FINISHED</h2>
-          
-          <div className="bg-black/40 border border-white/5 p-4 rounded-2xl mb-6 text-left space-y-2 text-sm">
-            <div className="text-cyan-400 font-bold uppercase tracking-wider text-xs border-b border-white/10 pb-1.5 mb-1.5">// FINAL PLACEMENTS</div>
-            {leaderboard.map((r, i) => (
-              <div key={i} className={`flex justify-between ${r.includes('PLAYER') ? 'text-pink-400 font-black text-base' : 'text-gray-400'}`}>
-                <span>{r}</span>
+        <div className="racing-gameover-overlay">
+          <div className="racing-gameover-box">
+            <h2>Grand Prix Over</h2>
+            <div className="racing-gameover-result">
+              You finished in <span>{rankText}</span>!
+            </div>
+            
+            {lapTimes.length > 0 && (
+              <div style={{ margin: '20px 0', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                RACE TIMES: {lapTimes.join('s, ')}s
               </div>
-            ))}
-          </div>
+            )}
 
-          <div className="bg-black/40 border border-white/5 p-4 rounded-xl mb-6 text-center text-yellow-400 uppercase font-black text-sm tracking-widest">
-            Total Score: {score}
+            <div className="racing-action-btns">
+              <button className="racing-btn" onClick={() => setPhase('playing')}>
+                Replay GP
+              </button>
+              <button className="racing-btn secondary" onClick={exitMatch}>
+                Back to Menu
+              </button>
+            </div>
           </div>
-          
-          <button
-            onClick={(e) => {
-              e.currentTarget.blur();
-              stateRef.current.restart?.();
-            }}
-            className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold tracking-widest uppercase rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
-          >
-            RE-ENGAGE ENGINES
-          </button>
         </div>
       )}
-
-      <BackButton />
     </div>
   );
 }

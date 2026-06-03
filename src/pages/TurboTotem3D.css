@@ -1,0 +1,61 @@
+.tt-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 54%, #164e63 100%);
+  color: #ecfeff;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.tt-canvas {
+  width: min(94vw, 1120px);
+  height: auto;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56), 0 0 42px rgba(34, 211, 238, 0.1);
+}
+
+.tt-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 286px;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.tt-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.tt-panel div,
+.tt-panel p {
+  color: #bae6fd;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tt-pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tt-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.25);
+  background: rgba(34, 211, 238, 0.12);
+  color: #ecfeff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tt-panel button.active {
+  border-color: #22d3ee;
+}

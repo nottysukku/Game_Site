@@ -1,0 +1,51 @@
+.oh-root {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #e0f2fe 0%, #94a3b8 58%, #312e81 100%);
+  color: #0f172a;
+  display: grid;
+  place-items: center;
+  font-family: "Courier New", monospace;
+  overflow: hidden;
+}
+
+.oh-canvas {
+  width: min(94vw, 1120px);
+  height: auto;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+}
+
+.oh-panel {
+  position: fixed;
+  top: 86px;
+  left: 24px;
+  width: 290px;
+  padding: 18px;
+  background: rgba(240, 249, 255, 0.82);
+  border: 1px solid rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.oh-panel h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.oh-panel div,
+.oh-panel p {
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.55;
+  font-weight: 800;
+}
+
+.oh-panel button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #312e81;
+  background: rgba(49, 46, 129, 0.12);
+  color: #0f172a;
+  font-weight: 900;
+  cursor: pointer;
+}

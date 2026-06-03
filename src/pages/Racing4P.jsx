@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import BackButton from './BackButton';
 import './Racing4P.css';
 
-const PLAYER_COLORS = ['#34d399', '#60a5fa', '#f472b6', '#f59e0b', '#a855f7', '#06b6d4'];
-const PLAYER_LABELS = ['P1 (Green)', 'P2 (Blue)', 'P3 (Pink)', 'P4 (Yellow)', 'CPU 1', 'CPU 2'];
+const DEFAULT_PLAYER_COLORS = ['#34d399', '#60a5fa', '#f472b6', '#f59e0b', '#a855f7', '#06b6d4'];
+const COLOR_SWATCHES = ['#34d399', '#60a5fa', '#f472b6', '#f59e0b', '#ef4444', '#06b6d4'];
+const PLAYER_LABELS = ['P1', 'P2 (Blue)', 'P3 (Pink)', 'P4 (Yellow)', 'CPU 1', 'CPU 2'];
 
 const CONTROL_SETS = [
   { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', label: 'P1: WASD' },
@@ -48,11 +49,13 @@ function getDistanceToTrack(p) {
 
 export default function Racing4P() {
   const canvasRef = useRef(null);
-  const [playerCount, setPlayerCount] = useState(4);
-  const [phase, setPhase] = useState('menu'); // menu | playing | over
+  const [playerCount, setPlayerCount] = useState(2);
+  const [lapCount, setLapCount] = useState(3);
+  const [p1Color, setP1Color] = useState('#34d399');
+  const [phase, setPhase] = useState('menu'); // menu | countdown | playing | over
   const [leaderboard, setLeaderboard] = useState([]);
   const [victoryText, setVictoryText] = useState("");
-  const stateRef = useRef({ restart: null, cleanup: null });
+  const stateRef = useRef({ start: null, cleanup: null });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -75,7 +78,7 @@ export default function Racing4P() {
     ];
 
     class Car {
-      constructor(idx, x, y, angle, isCPU = false) {
+      constructor(idx, x, y, angle, isCPU = false, totalLaps = 3, colors = null) {
         this.idx = idx;
         this.x = x;
         this.y = y;
@@ -87,31 +90,28 @@ export default function Racing4P() {
         this.turnSpeed = 0.055;
         this.radius = 12;
         this.isCPU = isCPU;
-        this.color = PLAYER_COLORS[idx];
+        this.color = colors ? colors[idx] : DEFAULT_PLAYER_COLORS[idx];
         this.label = PLAYER_LABELS[idx];
-        
+        this.totalLaps = totalLaps;
+
         // Lap tracking
         this.currentWaypoint = 0;
         this.lap = 1;
         this.finished = false;
-        
+
         // AI specific
         this.targetWaypoint = 0;
-        this.spinOut = 0; // oil slip penalty timer
       }
 
-      update() {
-        if (this.finished) {
-          this.speed *= 0.9;
-          this.x += Math.cos(this.angle) * this.speed;
-          this.y += Math.sin(this.angle) * this.speed;
+      update(countdownActive) {
+        // During countdown, force zero speed and ignore input
+        if (countdownActive) {
+          this.speed = 0;
           return;
         }
 
-        if (this.spinOut > 0) {
-          this.spinOut--;
-          this.angle += 0.25; // Spin rotation
-          this.speed *= 0.92;
+        if (this.finished) {
+          this.speed *= 0.9;
           this.x += Math.cos(this.angle) * this.speed;
           this.y += Math.sin(this.angle) * this.speed;
           return;
@@ -122,6 +122,17 @@ export default function Racing4P() {
         let speedLimit = this.maxSpeed;
         if (distFromTrack > 62) {
           speedLimit = 1.6; // Grass crawl
+        }
+
+        // Check oil overlap for high-friction zone
+        let inOil = false;
+        obstacles.forEach(obs => {
+          if (obs.type === 'OIL' && Math.hypot(this.x - obs.x, this.y - obs.y) < this.radius + obs.size) {
+            inOil = true;
+          }
+        });
+        if (inOil) {
+          speedLimit = 1.0; // Oil high-friction crawl
         }
 
         if (!this.isCPU) {
@@ -154,7 +165,7 @@ export default function Racing4P() {
           // Steer towards target waypoint
           const targetAngle = Math.atan2(dy, dx);
           let diff = targetAngle - this.angle;
-          
+
           // Normalize angle difference
           while (diff < -Math.PI) diff += Math.PI * 2;
           while (diff > Math.PI) diff -= Math.PI * 2;
@@ -170,14 +181,13 @@ export default function Racing4P() {
         this.x += Math.cos(this.angle) * this.speed;
         this.y += Math.sin(this.angle) * this.speed;
 
-        // Obstacle Collisions
+        // Obstacle Collisions (only cones now — oil is handled via speedLimit above)
         obstacles.forEach(obs => {
           if (Math.hypot(this.x - obs.x, this.y - obs.y) < this.radius + obs.size) {
-            if (obs.type === 'OIL') {
-              this.spinOut = 50; // spinout frames
-            } else {
+            if (obs.type === 'CONE') {
               this.speed = -1.2; // Cone crash bump
             }
+            // OIL is handled above via speedLimit, no spinout
           }
         });
 
@@ -188,7 +198,7 @@ export default function Racing4P() {
           this.currentWaypoint = nextWaypointIdx;
           if (nextWaypointIdx === 0) {
             this.lap++;
-            if (this.lap > 3) {
+            if (this.lap > this.totalLaps) {
               this.finished = true;
             }
           }
@@ -208,7 +218,7 @@ export default function Racing4P() {
         ctx.fillStyle = this.color;
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1.8;
-        
+
         ctx.beginPath();
         ctx.roundRect(-14, -8, 28, 16, 4);
         ctx.fill();
@@ -234,10 +244,14 @@ export default function Racing4P() {
     }
 
     let cars = [];
+    // Countdown state managed inside the engine
+    let countdownPhase = 0; // 0=not active, 3,2,1 = steps, -1 = GO!, -2 = done
+    let countdownStartTime = 0;
+    const COUNTDOWN_STEP_MS = 1000;
+    let goFadeAlpha = 1.0;
 
-    function setupMatch(count) {
+    function setupMatch(count, laps, colors) {
       cars = [];
-      // 4 starting grid placements behind finish line
       const starts = [
         { x: 500, y: 130, angle: 0 },
         { x: 470, y: 130, angle: 0 },
@@ -250,7 +264,7 @@ export default function Racing4P() {
       for (let i = 0; i < 6; i++) {
         const isCPU = i >= count;
         const grid = starts[i];
-        cars.push(new Car(i, grid.x, grid.y, grid.angle, isCPU));
+        cars.push(new Car(i, grid.x, grid.y, grid.angle, isCPU, laps, colors));
       }
     }
 
@@ -293,14 +307,14 @@ export default function Racing4P() {
       ctx.save();
       ctx.translate(500, 130);
       ctx.fillStyle = '#fff';
-      ctx.fillRect(-2, -66, 4, 132); // vertical line
+      ctx.fillRect(-2, -66, 4, 132);
       ctx.restore();
 
       // Draw waypoints indicators for sci-fi HUD feel
-      WAYPOINTS.forEach((wp, idx) => {
+      WAYPOINTS.forEach((wp) => {
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
         ctx.beginPath();
-        ctx.arc(wp.x, wp.y, 4, 0, Math.PI*2);
+        ctx.arc(wp.x, wp.y, 4, 0, Math.PI * 2);
         ctx.fill();
       });
     }
@@ -308,14 +322,19 @@ export default function Racing4P() {
     function drawObstacles(ctx) {
       obstacles.forEach(obs => {
         if (obs.type === 'OIL') {
-          // Slick dark pool
-          ctx.fillStyle = 'rgba(15,15,15,0.85)';
+          // Mud/tar puddle - dark brown instead of pure black
+          ctx.fillStyle = 'rgba(62, 39, 18, 0.88)';
           ctx.beginPath();
-          ctx.ellipse(obs.x, obs.y, obs.size + 4, obs.size - 2, 0.4, 0, Math.PI * 2);
+          ctx.ellipse(obs.x, obs.y, obs.size + 6, obs.size, 0.4, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#000';
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = 'rgba(40, 25, 10, 0.9)';
+          ctx.lineWidth = 1.5;
           ctx.stroke();
+          // Inner highlight blob
+          ctx.fillStyle = 'rgba(90, 60, 30, 0.5)';
+          ctx.beginPath();
+          ctx.ellipse(obs.x - 2, obs.y + 1, obs.size - 4, obs.size - 6, 0.2, 0, Math.PI * 2);
+          ctx.fill();
         } else {
           // Red-orange hazard cones
           ctx.fillStyle = '#ff7675';
@@ -326,23 +345,159 @@ export default function Racing4P() {
           ctx.closePath();
           ctx.fill();
           ctx.fillStyle = '#fff';
-          ctx.fillRect(obs.x - obs.size/2, obs.y, obs.size, 3);
+          ctx.fillRect(obs.x - obs.size / 2, obs.y, obs.size, 3);
         }
       });
     }
 
-    function gameLoop() {
+    function drawTrafficLight(ctx, step, alpha) {
+      // step: 3 = all red, 2 = top red + middle yellow, 1 = top red + middle yellow,
+      //       -1 = all green (GO!)
+      // alpha: global opacity for fade out
+      if (alpha <= 0) return;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const lightRadius = 22;
+      const spacing = 58;
+      const boxW = 70;
+      const boxH = 190;
+
+      // Housing
+      ctx.fillStyle = '#111';
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(cx - boxW / 2, cy - boxH / 2, boxW, boxH, 12);
+      ctx.fill();
+      ctx.stroke();
+
+      // Three lights
+      const positions = [
+        { y: cy - spacing, color: 'red' },     // top
+        { y: cy, color: 'yellow' },             // middle
+        { y: cy + spacing, color: 'green' }     // bottom
+      ];
+
+      positions.forEach((pos, i) => {
+        // Determine if this light is ON
+        let on = false;
+        if (step === 3) {
+          // All red
+          on = (i === 0);
+        } else if (step === 2 || step === 1) {
+          // Top red + middle yellow
+          on = (i === 0 || i === 1);
+        } else if (step === -1) {
+          // All green
+          on = (i === 2);
+        }
+
+        // Dark base
+        ctx.fillStyle = on ? 'transparent' : 'rgba(30,30,30,0.9)';
+        ctx.beginPath();
+        ctx.arc(cx, pos.y, lightRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (on) {
+          // Glow
+          let glowColor, lightColor;
+          if (pos.color === 'red') {
+            glowColor = 'rgba(255,50,50,0.5)';
+            lightColor = '#ff3333';
+          } else if (pos.color === 'yellow') {
+            glowColor = 'rgba(255,200,0,0.5)';
+            lightColor = '#ffcc00';
+          } else {
+            glowColor = 'rgba(0,255,100,0.5)';
+            lightColor = '#00ff66';
+          }
+
+          // Outer glow
+          const glow = ctx.createRadialGradient(cx, pos.y, lightRadius * 0.3, cx, pos.y, lightRadius * 2);
+          glow.addColorStop(0, glowColor);
+          glow.addColorStop(1, 'transparent');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(cx, pos.y, lightRadius * 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Light circle
+          ctx.fillStyle = lightColor;
+          ctx.beginPath();
+          ctx.arc(cx, pos.y, lightRadius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Specular highlight
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.beginPath();
+          ctx.arc(cx - 5, pos.y - 6, lightRadius * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Text label
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 32px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (step >= 1) {
+        ctx.fillText(String(step), cx, cy + boxH / 2 + 35);
+      } else if (step === -1) {
+        ctx.fillStyle = '#00ff66';
+        ctx.fillText('GO!', cx, cy + boxH / 2 + 35);
+      }
+
+      ctx.restore();
+    }
+
+    function gameLoop(currentLaps) {
       // 1. Draw track
       drawTrack(ctx);
       drawObstacles(ctx);
 
+      const countdownActive = countdownPhase > 0;
+
       // 2. Update and draw cars
       let finishedCount = 0;
       cars.forEach(car => {
-        car.update();
+        car.update(countdownActive);
         car.draw(ctx);
         if (car.finished) finishedCount++;
       });
+
+      // Handle countdown progression
+      if (countdownPhase > 0) {
+        const elapsed = performance.now() - countdownStartTime;
+        const totalSteps = 3; // 3, 2, 1
+        const currentStep = totalSteps - Math.floor(elapsed / COUNTDOWN_STEP_MS);
+        if (currentStep >= 1) {
+          countdownPhase = currentStep;
+        } else if (elapsed < (totalSteps + 1) * COUNTDOWN_STEP_MS) {
+          // GO! phase
+          countdownPhase = -1;
+        } else {
+          // Countdown fully done, start fading
+          countdownPhase = -2;
+          goFadeAlpha = 1.0;
+        }
+      }
+
+      // Draw traffic light during countdown
+      if (countdownPhase > 0 || countdownPhase === -1) {
+        drawTrafficLight(ctx, countdownPhase, 1.0);
+      } else if (countdownPhase === -2 && goFadeAlpha > 0) {
+        drawTrafficLight(ctx, -1, goFadeAlpha);
+        goFadeAlpha -= 0.03;
+        if (goFadeAlpha <= 0) {
+          goFadeAlpha = 0;
+          countdownPhase = 0; // fully done
+          setPhase('playing');
+        }
+      }
 
       // 3. Leaderboard calculations
       const standings = [...cars]
@@ -350,14 +505,13 @@ export default function Racing4P() {
           if (a.finished !== b.finished) return b.finished - a.finished;
           if (a.lap !== b.lap) return b.lap - a.lap;
           if (a.currentWaypoint !== b.currentWaypoint) return b.currentWaypoint - a.currentWaypoint;
-          // Distance to next waypoint (smaller is better)
           const nextWp = WAYPOINTS[(a.currentWaypoint + 1) % WAYPOINTS.length];
           const distA = Math.hypot(a.x - nextWp.x, a.y - nextWp.y);
           const distB = Math.hypot(b.x - nextWp.x, b.y - nextWp.y);
           return distA - distB;
         });
 
-      setLeaderboard(standings.map(c => `${c.label.split(' ')[0]} - L${Math.min(3, c.lap)}/3`));
+      setLeaderboard(standings.map(c => `${c.label.split(' ')[0]} - L${Math.min(currentLaps, c.lap)}/${currentLaps}`));
 
       // 4. End Condition
       if (finishedCount > 0) {
@@ -368,14 +522,20 @@ export default function Racing4P() {
         return;
       }
 
-      animationId = requestAnimationFrame(gameLoop);
+      animationId = requestAnimationFrame(() => gameLoop(currentLaps));
     }
 
-    stateRef.current.start = (count) => {
+    stateRef.current.start = (count, laps, colors) => {
       setVictoryText("");
-      setupMatch(count);
-      setPhase('playing');
-      animationId = requestAnimationFrame(gameLoop);
+      setupMatch(count, laps, colors);
+      setPhase('countdown');
+
+      // Start countdown
+      countdownPhase = 3;
+      countdownStartTime = performance.now();
+      goFadeAlpha = 1.0;
+
+      animationId = requestAnimationFrame(() => gameLoop(laps));
     };
 
     stateRef.current.cleanup = () => {
@@ -389,101 +549,135 @@ export default function Racing4P() {
     };
   }, []);
 
-  const handleStart = (count) => {
-    setPlayerCount(count);
-    stateRef.current.start?.(count);
+  const handleStart = () => {
+    // Build colors array with P1 custom color
+    const colors = [...DEFAULT_PLAYER_COLORS];
+    colors[0] = p1Color;
+    setPhase('countdown');
+    stateRef.current.start?.(playerCount, lapCount, colors);
   };
 
   return (
-    <div className="r4-root bg-[#090b14] text-white font-mono min-h-screen relative flex flex-col items-center">
+    <div className="r4-root">
       <BackButton />
 
       {phase === 'menu' && (
-        <div className="r4-overlay absolute inset-0 bg-[#06070c]/90 border border-cyan-500/20 backdrop-blur-md flex flex-col items-center justify-center z-20 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.15)] max-w-xl mx-auto my-auto h-[480px]">
-          <span className="text-[10px] text-cyan-400 tracking-[0.4em]">// MULTIPLAYER_GRID</span>
-          <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-purple-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.4)] mt-2 mb-4">
-            2D RACER 4P
-          </h1>
-          <p className="text-xs text-gray-400 max-w-md text-center mb-6 tracking-wide leading-relaxed">
-            Classic 2D grand prix. Steer through curves, dodge oil spills, and beat rival CPUs or friends! Out of road triggers slowdown penalty.
-          </p>
-
-          <div className="bg-black/30 border border-white/5 p-4 rounded-xl mb-6 text-left max-w-sm w-full text-[11px] text-gray-300">
-            <h4 className="text-[10px] text-purple-400 tracking-widest uppercase mb-2">// CONTROL_MATRIX</h4>
-            <div className="grid grid-cols-2 gap-2">
-              <div>P1: WASD</div>
-              <div>P2: IJKL</div>
-              <div>P3: TFGH</div>
-              <div>P4: Arrows</div>
-            </div>
-            <p className="text-[9px] text-cyan-400 font-bold uppercase text-center mt-3 tracking-wider">
-              UP is Forward / Accelerate
+        <div className="r4-overlay">
+          <div className="r4-menu-panel">
+            <span className="r4-tag">// MULTIPLAYER_GRID</span>
+            <h1 className="r4-title">2D RACER 4P</h1>
+            <p className="r4-subtitle">
+              Classic 2D grand prix. Steer through curves, dodge mud pits, and beat rival CPUs or friends! Off-road triggers slowdown penalty.
             </p>
-          </div>
 
-          <div className="flex gap-4">
-            <button 
-              onClick={() => handleStart(2)}
-              className="relative group px-6 py-2 text-cyan-400 hover:text-white uppercase transition-colors duration-300 tracking-widest text-xs font-black"
-            >
-              <span className="relative z-10">2 PLAYERS</span>
-              <span className="absolute inset-0 border border-cyan-500 rounded bg-cyan-950/20" />
-            </button>
-            <button 
-              onClick={() => handleStart(4)}
-              className="relative group px-6 py-2 text-purple-400 hover:text-white uppercase transition-colors duration-300 tracking-widest text-xs font-black"
-            >
-              <span className="relative z-10">4 PLAYERS</span>
-              <span className="absolute inset-0 border border-purple-500 rounded bg-purple-950/20" />
+            {/* Settings */}
+            <div className="r4-settings">
+              {/* Player Count */}
+              <div className="r4-setting-group">
+                <div className="r4-setting-label">// PLAYER COUNT</div>
+                <div className="r4-btn-row">
+                  {[1, 2, 3, 4].map(n => (
+                    <button
+                      key={n}
+                      className={`r4-option-btn${playerCount === n ? ' active' : ''}`}
+                      onClick={() => setPlayerCount(n)}
+                    >
+                      {n} {n === 1 ? 'PLAYER' : 'PLAYERS'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Lap Count */}
+              <div className="r4-setting-group">
+                <div className="r4-setting-label">// LAP COUNT</div>
+                <div className="r4-btn-row">
+                  {[3, 5, 10].map(n => (
+                    <button
+                      key={n}
+                      className={`r4-option-btn${lapCount === n ? ' active' : ''}`}
+                      onClick={() => setLapCount(n)}
+                    >
+                      {n} LAPS
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* P1 Color Picker */}
+              <div className="r4-setting-group">
+                <div className="r4-setting-label">// P1 CAR COLOR</div>
+                <div className="r4-swatch-row">
+                  {COLOR_SWATCHES.map(c => (
+                    <div
+                      key={c}
+                      className={`r4-swatch${p1Color === c ? ' active' : ''}`}
+                      style={{ backgroundColor: c }}
+                      onClick={() => setP1Color(c)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Controls Info */}
+            <div className="r4-controls-box">
+              <div className="r4-setting-label">// CONTROL_MATRIX</div>
+              <div className="r4-controls-grid">
+                <div>P1: WASD</div>
+                <div>P2: IJKL</div>
+                <div>P3: TFGH</div>
+                <div>P4: Arrows</div>
+              </div>
+              <div className="r4-controls-hint">UP is Forward / Accelerate</div>
+            </div>
+
+            <button className="r4-start-btn" onClick={handleStart}>
+              START RACE
             </button>
           </div>
         </div>
       )}
 
-      {phase === 'playing' && (
-        <div className="absolute top-6 left-6 right-6 flex justify-between z-20 pointer-events-none text-xs">
+      {(phase === 'playing' || phase === 'countdown') && (
+        <div className="r4-hud-bar">
           {/* Leaderboard Panel */}
-          <div className="bg-black/60 border border-cyan-500/20 text-cyan-400 p-4 rounded-xl backdrop-blur-sm shadow-[0_0_15px_rgba(6,182,212,0.1)]">
-            <h3 className="font-bold text-[10px] tracking-widest uppercase border-b border-cyan-500/30 pb-1 mb-2">// STANDINGS</h3>
-            <div className="grid grid-cols-1 gap-1">
+          <div className="r4-leaderboard">
+            <div className="r4-leaderboard-title">// STANDINGS</div>
+            <div>
               {leaderboard.map((item, idx) => (
-                <div key={idx} className="flex gap-2">
-                  <span>{idx + 1}.</span>
-                  <span className="font-bold text-white">{item}</span>
+                <div key={idx} className="r4-standing-row">
+                  <span className="r4-standing-rank">{idx + 1}.</span>
+                  <span className="r4-standing-name">{item}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* HUD Target information */}
-          <div className="bg-black/60 border border-purple-500/20 text-purple-400 p-4 rounded-xl backdrop-blur-sm max-w-xs text-right h-fit">
-            <h3 className="font-bold text-[10px] tracking-widest uppercase mb-1">// OBJECTIVE</h3>
-            <p className="text-white text-[11px] leading-tight font-medium">COMPLETE 3 LAPS TO CLAIM VICTORY</p>
+          {/* HUD Objective */}
+          <div className="r4-objective">
+            <div className="r4-objective-title">// OBJECTIVE</div>
+            <div className="r4-objective-text">COMPLETE {lapCount} LAPS TO CLAIM VICTORY</div>
           </div>
         </div>
       )}
 
       {phase === 'over' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 z-30">
-          <div className="bg-[#07070f]/95 border border-cyan-500/30 p-8 md:p-12 rounded-2xl text-center shadow-[0_0_50px_rgba(6,182,212,0.15)] max-w-md w-full">
-            <span className="text-[10px] text-cyan-400 tracking-[0.4em]">// RIVALRY_RESOLVED</span>
-            <h2 className="text-3xl font-black text-white mt-2 mb-4 uppercase">GRAND PRIX OVER</h2>
-            <div className="bg-black/40 border border-white/5 p-4 rounded-xl mb-6 text-sm text-cyan-300 uppercase tracking-wide">
+        <div className="r4-gameover-overlay">
+          <div className="r4-gameover-panel">
+            <span className="r4-gameover-tag">// RIVALRY_RESOLVED</span>
+            <h2 className="r4-gameover-heading">GRAND PRIX OVER</h2>
+            <div className="r4-gameover-result">
               {victoryText}
             </div>
-            
-            <button 
-              onClick={() => handleStart(playerCount)}
-              className="relative group px-6 py-2.5 text-cyan-400 hover:text-white uppercase transition-colors tracking-widest text-xs font-bold w-full"
-            >
-              <span className="relative z-10">RE-ENGAGE RACERS</span>
-              <span className="absolute inset-0 border border-cyan-500 group-hover:border-cyan-400 rounded bg-cyan-950/20 transition-all duration-300" />
+            <button className="r4-restart-btn" onClick={handleStart}>
+              RE-ENGAGE RACERS
             </button>
           </div>
         </div>
       )}
 
-      <canvas ref={canvasRef} width={1000} height={600} className="r4-canvas mt-20 border border-white/10 rounded-2xl shadow-2xl bg-[#27ae60]" />
+      <canvas ref={canvasRef} width={1000} height={600} className="r4-canvas" />
     </div>
   );
 }

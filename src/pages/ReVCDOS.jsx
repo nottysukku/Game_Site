@@ -8,7 +8,7 @@ export default function ReVCDOS() {
       <BackButton />
       <div className="revc-iframe-container">
         <iframe
-          src="/revcdos/index.html"
+          src="https://quenq.com/apps/vice-city/"
           title="GTA Vice City HTML5"
           className="revc-iframe"
           allow="fullscreen; keyboard; gamepad"

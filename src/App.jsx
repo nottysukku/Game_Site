@@ -1,4 +1,4 @@
-﻿import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
 
@@ -65,6 +65,7 @@ const Racing4P = lazy(() => import('./pages/Racing4P'));
 const FpsShooter3D = lazy(() => import('./pages/FpsShooter3D'));
 const SnakesAndLadders = lazy(() => import('./pages/SnakesAndLadders'));
 const ReVCDOS = lazy(() => import('./pages/ReVCDOS'));
+const Gateway = lazy(() => import('./pages/Gateway'));
 
 
 function Loader() {
@@ -143,6 +144,7 @@ export default function App() {
         <Route path="/fps3d" element={<FpsShooter3D />} />
         <Route path="/snakes-ladders" element={<SnakesAndLadders />} />
         <Route path="/revcdos" element={<ReVCDOS />} />
+        <Route path="/gateway/:gameKey" element={<Gateway />} />
       </Routes>
     </Suspense>
   );

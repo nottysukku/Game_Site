@@ -76,12 +76,12 @@ export default function PacMan() {
     const { walls, dots, powerPills } = parseMaze();
     stateRef.current = {
       walls, dots, powerPills,
-      pac: { r: 23, c: 14, x: 14 * TILE + TILE / 2, y: 23 * TILE + TILE / 2, dir: 0, nextDir: 0, mouthAngle: 0, mouthDir: 1, speed: 2 },
+      pac: { r: 23, c: 14, x: 14 * TILE + TILE / 2, y: 23 * TILE + TILE / 2, dir: 0, nextDir: 0, mouthAngle: 0, mouthDir: 1, speed: 2, lastGridX: 14, lastGridY: 23 },
       ghosts: [
-        { r: 11, c: 14, x: 14 * TILE + TILE / 2, y: 11 * TILE + TILE / 2, dir: 0, color: GHOST_COLORS[0], mode: 'scatter', scared: false, speed: 1.5, eaten: false },
-        { r: 13, c: 12, x: 12 * TILE + TILE / 2, y: 13 * TILE + TILE / 2, dir: 1, color: GHOST_COLORS[1], mode: 'scatter', scared: false, speed: 1.4, eaten: false },
-        { r: 13, c: 14, x: 14 * TILE + TILE / 2, y: 13 * TILE + TILE / 2, dir: 2, color: GHOST_COLORS[2], mode: 'scatter', scared: false, speed: 1.4, eaten: false },
-        { r: 13, c: 16, x: 16 * TILE + TILE / 2, y: 13 * TILE + TILE / 2, dir: 3, color: GHOST_COLORS[3], mode: 'scatter', scared: false, speed: 1.3, eaten: false },
+        { r: 11, c: 14, x: 14 * TILE + TILE / 2, y: 11 * TILE + TILE / 2, dir: 0, color: GHOST_COLORS[0], mode: 'scatter', scared: false, speed: 1.5, eaten: false, lastGridX: 14, lastGridY: 11 },
+        { r: 13, c: 12, x: 12 * TILE + TILE / 2, y: 13 * TILE + TILE / 2, dir: 1, color: GHOST_COLORS[1], mode: 'scatter', scared: false, speed: 1.4, eaten: false, lastGridX: 12, lastGridY: 13 },
+        { r: 13, c: 14, x: 14 * TILE + TILE / 2, y: 13 * TILE + TILE / 2, dir: 2, color: GHOST_COLORS[2], mode: 'scatter', scared: false, speed: 1.4, eaten: false, lastGridX: 14, lastGridY: 13 },
+        { r: 13, c: 16, x: 16 * TILE + TILE / 2, y: 13 * TILE + TILE / 2, dir: 3, color: GHOST_COLORS[3], mode: 'scatter', scared: false, speed: 1.3, eaten: false, lastGridX: 16, lastGridY: 13 },
       ],
       score: 0, lives: 3, level: 1,
       powerTimer: 0, ghostsEatenCombo: 0,
@@ -138,27 +138,56 @@ export default function PacMan() {
       if (k['ArrowLeft'] || k['a']) pac.nextDir = 2;
       if (k['ArrowUp'] || k['w']) pac.nextDir = 3;
 
+      // Reverse direction instantly anywhere
+      if (pac.nextDir === (pac.dir + 2) % 4) {
+        pac.dir = pac.nextDir;
+        pac.lastGridX = -1;
+        pac.lastGridY = -1;
+      }
+
       // Try next direction
       const cx = Math.round((pac.x - TILE / 2) / TILE);
       const cy = Math.round((pac.y - TILE / 2) / TILE);
-      const onGrid = Math.abs(pac.x - (cx * TILE + TILE / 2)) < 3 && Math.abs(pac.y - (cy * TILE + TILE / 2)) < 3;
+      const centerX = cx * TILE + TILE / 2;
+      const centerY = cy * TILE + TILE / 2;
 
-      if (onGrid) {
-        pac.x = cx * TILE + TILE / 2;
-        pac.y = cy * TILE + TILE / 2;
-        pac.r = cy; pac.c = cx;
+      if (cx !== pac.lastGridX || cy !== pac.lastGridY) {
+        const dist = Math.max(Math.abs(pac.x - centerX), Math.abs(pac.y - centerY));
+        if (dist < pac.speed) {
+          pac.x = centerX;
+          pac.y = centerY;
+          pac.r = cy; pac.c = cx;
+          pac.lastGridX = cx; pac.lastGridY = cy;
 
-        if (canMove(pac.x, pac.y, pac.nextDir)) pac.dir = pac.nextDir;
+          if (!isWall(cy + DY[pac.nextDir], cx + DX[pac.nextDir])) {
+            pac.dir = pac.nextDir;
+          } else if (isWall(cy + DY[pac.dir], cx + DX[pac.dir])) {
+            pac.x = centerX;
+            pac.y = centerY;
+          }
+        }
       }
 
-      if (canMove(pac.x, pac.y, pac.dir)) {
+      const nextPacR = cy + DY[pac.dir];
+      const nextPacC = cx + DX[pac.dir];
+      const pacBlocked = isWall(nextPacR, nextPacC) && Math.max(Math.abs(pac.x - centerX), Math.abs(pac.y - centerY)) < pac.speed;
+      if (!pacBlocked) {
         pac.x += DX[pac.dir] * pac.speed;
         pac.y += DY[pac.dir] * pac.speed;
+      } else {
+        pac.x = centerX;
+        pac.y = centerY;
       }
 
-      // Tunnel
-      if (pac.x < -TILE) pac.x = W + TILE;
-      if (pac.x > W + TILE) pac.x = -TILE;
+      // Tunnel wrap for pacman
+      if (pac.x < -TILE / 2) {
+        pac.x = W + TILE / 2;
+        pac.lastGridX = COLS;
+      }
+      if (pac.x > W + TILE / 2) {
+        pac.x = -TILE / 2;
+        pac.lastGridX = -1;
+      }
 
       // Mouth animation
       pac.mouthAngle += 0.15 * pac.mouthDir;
@@ -192,14 +221,19 @@ export default function PacMan() {
 
       // Ghosts
       for (const g of s.ghosts) {
-        const gx = Math.round((g.x - TILE / 2) / TILE);
-        const gy = Math.round((g.y - TILE / 2) / TILE);
-        const gOnGrid = Math.abs(g.x - (gx * TILE + TILE / 2)) < 2 && Math.abs(g.y - (gy * TILE + TILE / 2)) < 2;
+        const gcx = Math.round((g.x - TILE / 2) / TILE);
+        const gcy = Math.round((g.y - TILE / 2) / TILE);
+        const gCenterX = gcx * TILE + TILE / 2;
+        const gCenterY = gcy * TILE + TILE / 2;
 
-        if (gOnGrid) {
-          g.x = gx * TILE + TILE / 2;
-          g.y = gy * TILE + TILE / 2;
-          g.r = gy; g.c = gx;
+        const currentSpd = g.eaten ? 3 : g.scared ? 1 : g.speed;
+        const gDist = Math.max(Math.abs(g.x - gCenterX), Math.abs(g.y - gCenterY));
+
+        if (gDist < currentSpd && (gcx !== g.lastGridX || gcy !== g.lastGridY)) {
+          g.x = gCenterX;
+          g.y = gCenterY;
+          g.r = gcy; g.c = gcx;
+          g.lastGridX = gcx; g.lastGridY = gcy;
 
           // Choose direction
           let bestDir = g.dir;
@@ -209,59 +243,67 @@ export default function PacMan() {
           if (g.eaten) {
             targetR = 13; targetC = 14; // Back to ghost house
           } else if (g.scared) {
-            // Random direction
             const options = [];
             for (let d = 0; d < 4; d++) {
               if (d === (g.dir + 2) % 4) continue;
-              const nr = gy + DY[d], nc = gx + DX[d];
+              const nr = gcy + DY[d], nc = gcx + DX[d];
               if (!isWall(nr, nc)) options.push(d);
             }
             bestDir = options.length > 0 ? options[Math.floor(Math.random() * options.length)] : g.dir;
           } else {
-            // Chase/scatter
             if (s.scatter) {
               const corners = [[0, COLS - 1], [ROWS - 1, COLS - 1], [ROWS - 1, 0], [0, 0]];
               const ci = s.ghosts.indexOf(g) % 4;
               targetR = corners[ci][0]; targetC = corners[ci][1];
             } else {
               targetR = pac.r; targetC = pac.c;
-              // Pinky targets 4 ahead
               if (g === s.ghosts[1]) { targetR += DY[pac.dir] * 4; targetC += DX[pac.dir] * 4; }
             }
 
             for (let d = 0; d < 4; d++) {
               if (d === (g.dir + 2) % 4) continue;
-              const nr = gy + DY[d], nc = gx + DX[d];
+              const nr = gcy + DY[d], nc = gcx + DX[d];
               if (isWall(nr, nc)) continue;
               const dist = (nr - targetR) ** 2 + (nc - targetC) ** 2;
               if (dist < bestDist) { bestDist = dist; bestDir = d; }
             }
           }
 
-          // Check if chosen dir is valid
-          const nr = gy + DY[bestDir], nc = gx + DX[bestDir];
-          if (!isWall(nr, nc)) g.dir = bestDir;
-          else {
-            // Find any valid dir
+          if (!isWall(gcy + DY[bestDir], gcx + DX[bestDir])) {
+            g.dir = bestDir;
+          } else {
+            let found = false;
             for (let d = 0; d < 4; d++) {
-              const rr = gy + DY[d], cc = gx + DX[d];
-              if (!isWall(rr, cc)) { g.dir = d; break; }
+              if (d === (g.dir + 2) % 4) continue;
+              if (!isWall(gcy + DY[d], gcx + DX[d])) { g.dir = d; found = true; break; }
+            }
+            if (!found) {
+              const rev = (g.dir + 2) % 4;
+              if (!isWall(gcy + DY[rev], gcx + DX[rev])) g.dir = rev;
             }
           }
         }
 
-        const spd = g.eaten ? 3 : g.scared ? 1 : g.speed;
-        const nmx = g.x + DX[g.dir] * spd;
-        const nmy = g.y + DY[g.dir] * spd;
-        const nmc = Math.floor(nmx / TILE);
-        const nmr = Math.floor(nmy / TILE);
-        if (!isWall(nmr, nmc)) {
-          g.x = nmx; g.y = nmy;
+        const nextGhostR = gcy + DY[g.dir];
+        const nextGhostC = gcx + DX[g.dir];
+        const ghostBlocked = isWall(nextGhostR, nextGhostC) && Math.max(Math.abs(g.x - gCenterX), Math.abs(g.y - gCenterY)) < currentSpd;
+        if (!ghostBlocked) {
+          g.x += DX[g.dir] * currentSpd;
+          g.y += DY[g.dir] * currentSpd;
+        } else {
+          g.x = gCenterX;
+          g.y = gCenterY;
         }
 
         // Tunnel
-        if (g.x < -TILE) g.x = W + TILE;
-        if (g.x > W + TILE) g.x = -TILE;
+        if (g.x < -TILE / 2) {
+          g.x = W + TILE / 2;
+          g.lastGridX = COLS;
+        }
+        if (g.x > W + TILE / 2) {
+          g.x = -TILE / 2;
+          g.lastGridX = -1;
+        }
 
         // Ghost returned to house
         if (g.eaten && Math.abs(g.x - 14 * TILE - TILE / 2) < 8 && Math.abs(g.y - 13 * TILE - TILE / 2) < 8) {
@@ -280,11 +322,11 @@ export default function PacMan() {
             setLives(s.lives);
             if (s.lives <= 0) { setPhase('gameover'); return; }
             // Reset positions
-            pac.x = 14 * TILE + TILE / 2; pac.y = 23 * TILE + TILE / 2; pac.dir = 0;
-            s.ghosts[0].x = 14 * TILE + TILE / 2; s.ghosts[0].y = 11 * TILE + TILE / 2;
-            s.ghosts[1].x = 12 * TILE + TILE / 2; s.ghosts[1].y = 13 * TILE + TILE / 2;
-            s.ghosts[2].x = 14 * TILE + TILE / 2; s.ghosts[2].y = 13 * TILE + TILE / 2;
-            s.ghosts[3].x = 16 * TILE + TILE / 2; s.ghosts[3].y = 13 * TILE + TILE / 2;
+            pac.x = 14 * TILE + TILE / 2; pac.y = 23 * TILE + TILE / 2; pac.dir = 0; pac.nextDir = 0; pac.lastGridX = 14; pac.lastGridY = 23;
+            s.ghosts[0].x = 14 * TILE + TILE / 2; s.ghosts[0].y = 11 * TILE + TILE / 2; s.ghosts[0].lastGridX = 14; s.ghosts[0].lastGridY = 11; s.ghosts[0].dir = 0; s.ghosts[0].eaten = false; s.ghosts[0].scared = false;
+            s.ghosts[1].x = 12 * TILE + TILE / 2; s.ghosts[1].y = 13 * TILE + TILE / 2; s.ghosts[1].lastGridX = 12; s.ghosts[1].lastGridY = 13; s.ghosts[1].dir = 1; s.ghosts[1].eaten = false; s.ghosts[1].scared = false;
+            s.ghosts[2].x = 14 * TILE + TILE / 2; s.ghosts[2].y = 13 * TILE + TILE / 2; s.ghosts[2].lastGridX = 14; s.ghosts[2].lastGridY = 13; s.ghosts[2].dir = 2; s.ghosts[2].eaten = false; s.ghosts[2].scared = false;
+            s.ghosts[3].x = 16 * TILE + TILE / 2; s.ghosts[3].y = 13 * TILE + TILE / 2; s.ghosts[3].lastGridX = 16; s.ghosts[3].lastGridY = 13; s.ghosts[3].dir = 3; s.ghosts[3].eaten = false; s.ghosts[3].scared = false;
           }
         }
       }
@@ -295,7 +337,11 @@ export default function PacMan() {
         setLevel(s.level);
         const { dots, powerPills } = parseMaze();
         s.dots = dots; s.powerPills = powerPills;
-        pac.x = 14 * TILE + TILE / 2; pac.y = 23 * TILE + TILE / 2;
+        pac.x = 14 * TILE + TILE / 2; pac.y = 23 * TILE + TILE / 2; pac.dir = 0; pac.nextDir = 0; pac.lastGridX = 14; pac.lastGridY = 23;
+        s.ghosts[0].x = 14 * TILE + TILE / 2; s.ghosts[0].y = 11 * TILE + TILE / 2; s.ghosts[0].lastGridX = 14; s.ghosts[0].lastGridY = 11; s.ghosts[0].dir = 0; s.ghosts[0].eaten = false; s.ghosts[0].scared = false;
+        s.ghosts[1].x = 12 * TILE + TILE / 2; s.ghosts[1].y = 13 * TILE + TILE / 2; s.ghosts[1].lastGridX = 12; s.ghosts[1].lastGridY = 13; s.ghosts[1].dir = 1; s.ghosts[1].eaten = false; s.ghosts[1].scared = false;
+        s.ghosts[2].x = 14 * TILE + TILE / 2; s.ghosts[2].y = 13 * TILE + TILE / 2; s.ghosts[2].lastGridX = 14; s.ghosts[2].lastGridY = 13; s.ghosts[2].dir = 2; s.ghosts[2].eaten = false; s.ghosts[2].scared = false;
+        s.ghosts[3].x = 16 * TILE + TILE / 2; s.ghosts[3].y = 13 * TILE + TILE / 2; s.ghosts[3].lastGridX = 16; s.ghosts[3].lastGridY = 13; s.ghosts[3].dir = 3; s.ghosts[3].eaten = false; s.ghosts[3].scared = false;
       }
 
       setScore(s.score);

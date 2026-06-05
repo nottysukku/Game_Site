@@ -548,13 +548,28 @@ export default function FpsShooter3D() {
             setTimeout(() => { st.scene.remove(opFlash); }, 50);
           }
 
-          const tracerCol = st.team === 'Blue' ? 0xff3300 : 0x00e5ff;
-          const material = new THREE.LineBasicMaterial({ color: tracerCol, transparent: true, opacity: 0.8 });
-          const points = [origin, origin.clone().addScaledVector(dir, 150)];
-          const geometry = new THREE.BufferGeometry().setFromPoints(points);
-          const tracer = new THREE.Line(geometry, material);
-          st.scene.add(tracer);
-          st.bulletsList.push({ mesh: tracer, age: 0, maxAge: 0.08 });
+          const weaponConfig = WEAPONS[data.weaponId || 'ar'];
+          const numPellets = weaponConfig.pellets || 1;
+          for (let p = 0; p < numPellets; p++) {
+            const finalDir = applySpread(dir, weaponConfig.spread);
+            const bulletMesh = createBulletMesh('opponent', st.team, data.weaponId);
+            bulletMesh.position.copy(origin);
+            st.scene.add(bulletMesh);
+
+            st.bulletsList.push({
+              mesh: bulletMesh,
+              pos: origin.clone(),
+              dir: finalDir,
+              speed: 120,
+              owner: 'opponent',
+              damage: weaponConfig.damage,
+              range: weaponConfig.range,
+              distanceTraveled: 0,
+              weaponId: data.weaponId,
+              age: 0,
+              maxAge: 2.0
+            });
+          }
         }
       }
       else if (data.type === 'grenade') {
@@ -650,14 +665,26 @@ export default function FpsShooter3D() {
         playShootSound(data.weaponId || 'ar', false);
         if (st.scene) {
           const origin = new THREE.Vector3(data.origin.x, data.origin.y, data.origin.z);
-          const hitPt = new THREE.Vector3(data.hitPt.x, data.hitPt.y, data.hitPt.z);
+          const dir = new THREE.Vector3(data.direction.x, data.direction.y, data.direction.z);
           
-          const material = new THREE.LineBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.8 });
-          const points = [origin, hitPt];
-          const geometry = new THREE.BufferGeometry().setFromPoints(points);
-          const tracer = new THREE.Line(geometry, material);
-          st.scene.add(tracer);
-          st.bulletsList.push({ mesh: tracer, age: 0, maxAge: 0.08 });
+          const bulletMesh = createBulletMesh('bot', st.team, 'ar');
+          bulletMesh.position.copy(origin);
+          st.scene.add(bulletMesh);
+
+          st.bulletsList.push({
+            mesh: bulletMesh,
+            pos: origin.clone(),
+            dir: dir,
+            speed: 90,
+            owner: 'bot',
+            ownerId: data.botId,
+            damage: 0,
+            range: 100,
+            distanceTraveled: 0,
+            weaponId: 'ar',
+            age: 0,
+            maxAge: 2.0
+          });
 
           const flash = new THREE.PointLight(0xff7700, 3, 4);
           flash.position.copy(origin);
@@ -1393,9 +1420,9 @@ export default function FpsShooter3D() {
 
       const shootOrigin = st.pos.clone().add(new THREE.Vector3(0, 0.7, 0));
       const lookDir = new THREE.Vector3(
-        Math.sin(st.yaw) * Math.cos(st.pitch),
+        -Math.sin(st.yaw) * Math.cos(st.pitch),
         Math.sin(st.pitch),
-        Math.cos(st.yaw) * Math.cos(st.pitch)
+        -Math.cos(st.yaw) * Math.cos(st.pitch)
       ).normalize();
 
       flashLight.intensity = 4;
@@ -1413,136 +1440,32 @@ export default function FpsShooter3D() {
         });
       }
 
-      // Tracer line
-      const tracerCol = st.team === 'Blue' ? 0x00e5ff : 0xff3b30;
-      const tMat = new THREE.LineBasicMaterial({ color: tracerCol, transparent: true, opacity: 0.85 });
-      const tPts = [shootOrigin, shootOrigin.clone().addScaledVector(lookDir, curW.range)];
-      const tGeom = new THREE.BufferGeometry().setFromPoints(tPts);
-      const tracer = new THREE.Line(tGeom, tMat);
-      scene.add(tracer);
-      st.bulletsList.push({ mesh: tracer, age: 0, maxAge: 0.06 });
+      // Spawn traveling physical bullets/pellets
+      const numPellets = curW.pellets || 1;
+      for (let p = 0; p < numPellets; p++) {
+        const finalDir = applySpread(lookDir, curW.spread);
+        const bulletMesh = createBulletMesh('player', st.team, st.activeWeaponId);
+        bulletMesh.position.copy(shootOrigin);
+        scene.add(bulletMesh);
+
+        st.bulletsList.push({
+          mesh: bulletMesh,
+          pos: shootOrigin.clone(),
+          dir: finalDir,
+          speed: 120,
+          owner: 'player',
+          damage: curW.damage,
+          range: curW.range,
+          distanceTraveled: 0,
+          weaponId: st.activeWeaponId,
+          age: 0,
+          maxAge: 2.0
+        });
+      }
 
       st.pitch += curW.recoil;
       st.yaw += (Math.random() - 0.5) * curW.recoil * 0.5;
       st.cameraShake = curW.recoil * 1.5;
-
-      // Handle Raycasting hits (against wall walls, dummies, bots, remote client, and zombies)
-      const raycastResults = castPlayerRaycast(st, shootOrigin, lookDir, curW);
-      
-      // Let's also check Zombies hitscan
-      let zombieHit = null;
-      let zombieHitDist = curW.range;
-      let zombieHeadshot = false;
-
-      st.zombies.forEach((zombie) => {
-        const zBox = new THREE.Box3(
-          zombie.pos.clone().sub(new THREE.Vector3(0.35 * zombie.scale, 0.9 * zombie.scale, 0.35 * zombie.scale)),
-          zombie.pos.clone().add(new THREE.Vector3(0.35 * zombie.scale, 0.9 * zombie.scale, 0.35 * zombie.scale))
-        );
-        const hitPt = new THREE.Vector3();
-        const ray = new THREE.Ray(shootOrigin, lookDir);
-        if (ray.intersectBox(zBox, hitPt)) {
-          const d = shootOrigin.distanceTo(hitPt);
-          if (d < zombieHitDist) {
-            zombieHitDist = d;
-            zombieHit = zombie;
-            zombieHeadshot = (hitPt.y - zombie.group.position.y > 1.05 * zombie.scale);
-          }
-        }
-      });
-
-      // Process closest target priority
-      let finalHit = raycastResults;
-      if (zombieHit && zombieHitDist < raycastResults.closestDist) {
-        finalHit = {
-          closestDist: zombieHitDist,
-          closestHit: shootOrigin.clone().addScaledVector(lookDir, zombieHitDist),
-          hitType: 'zombie',
-          hitObject: zombieHit,
-          headshot: zombieHeadshot
-        };
-      }
-
-      const hitType = finalHit.hitType;
-      const closestHit = finalHit.closestHit;
-      const hitObject = finalHit.hitObject;
-      const isHead = finalHit.headshot;
-
-      if (closestHit) {
-        const sparkColor = hitType === 'opponent' ? 0xff0055 :
-                           hitType === 'zombie' ? 0x00ff55 :
-                           hitType === 'bot' ? 0xff3300 :
-                           hitType === 'dummy' ? 0xffff00 : 0xaaaaaa;
-        spawnImpactSparks(closestHit, sparkColor, hitType === 'wall' ? 4 : 12);
-
-        // Apply weapon damage math & headshot multiplier
-        let baseDmg = curW.damage;
-        if (isHead) baseDmg = Math.floor(baseDmg * 2.2);
-
-        if (hitType === 'dummy') {
-          hitObject.flashTimer = 0.2;
-          hitObject.torsoMesh.material.color.setHex(0xffff00);
-          hitObject.headMesh.material.color.setHex(0xffff00);
-
-          const pop = createDamagePopup(`-${baseDmg}`, closestHit, '#ffff00');
-          st.damagePopups.push(pop);
-          playHitmarkerSound(isHead);
-        }
-        else if (hitType === 'bot') {
-          hitObject.flashTimer = 0.2;
-          hitObject.torsoMesh.material.color.setHex(0xffff00);
-
-          const pop = createDamagePopup(`-${baseDmg}`, closestHit, isHead ? '#ffff00' : '#ff3300');
-          st.damagePopups.push(pop);
-          playHitmarkerSound(isHead);
-
-          if (isHost) {
-            dealDamageToBot(hitObject, baseDmg, 'Player');
-          } else {
-            connRef.current.send({ type: 'bot_hit', botId: hitObject.id, damage: baseDmg });
-          }
-        }
-        else if (hitType === 'opponent') {
-          playHitmarkerSound(isHead);
-          if (connRef.current && st.connected) {
-            connRef.current.send({ type: 'hit', damage: baseDmg });
-          }
-        }
-        else if (hitType === 'zombie') {
-          playHitmarkerSound(isHead);
-          const pop = createDamagePopup(`-${baseDmg}`, closestHit, isHead ? '#facc15' : '#4ade80');
-          st.damagePopups.push(pop);
-
-          if (isHost) {
-            hitObject.hp = Math.max(0, hitObject.hp - baseDmg);
-            if (hitObject.type === 'boss') setBossHp(hitObject.hp);
-            
-            if (hitObject.hp <= 0) {
-              scene.remove(hitObject.group);
-              st.zombies = st.zombies.filter(z => z.id !== hitObject.id);
-              setZombiesCount(st.zombies.length);
-              addLog(`Zombie eliminated!`, true);
-              
-              if (hitObject.type === 'boss') {
-                setBossHp(0);
-                addLog(`Giant Boss defeated! Wave complete.`, true);
-              }
-              if (connRef.current && st.connected) {
-                connRef.current.send({ type: 'zombie_death', zId: hitObject.id });
-              }
-            } else {
-              hitObject.flashTimer = 0.15;
-              hitObject.torsoMesh.material.color.setHex(0xffff00);
-              if (connRef.current && st.connected) {
-                connRef.current.send({ type: 'zombie_hit_effect', zId: hitObject.id, hp: hitObject.hp });
-              }
-            }
-          } else {
-            // Client forwards zombie damage calculation to host
-            connRef.current.send({ type: 'zombie_hit', zId: hitObject.id, damage: baseDmg });
-          }
-        }
-      }
     };
 
     const triggerGrenade = () => {
@@ -1551,9 +1474,9 @@ export default function FpsShooter3D() {
 
       const throwOrigin = st.pos.clone().add(new THREE.Vector3(0, 0.7, 0));
       const lookDir = new THREE.Vector3(
-        Math.sin(st.yaw) * Math.cos(st.pitch),
+        -Math.sin(st.yaw) * Math.cos(st.pitch),
         Math.sin(st.pitch),
-        Math.cos(st.yaw) * Math.cos(st.pitch)
+        -Math.cos(st.yaw) * Math.cos(st.pitch)
       ).normalize();
 
       const velocity = lookDir.clone().multiplyScalar(15).add(new THREE.Vector3(0, 3.0, 0));
@@ -1580,6 +1503,33 @@ export default function FpsShooter3D() {
         velocity: velocity,
         age: 0
       });
+    };
+
+    const createBulletMesh = (owner, team, weaponId) => {
+      const geom = new THREE.SphereGeometry(0.06, 8, 8);
+      let color = 0xffaa00;
+      if (owner === 'player') {
+        color = (team === 'Blue') ? 0x00e5ff : 0xff3b30;
+      } else if (owner === 'opponent') {
+        color = (team === 'Blue') ? 0xff3b30 : 0x00e5ff;
+      } else if (owner.startsWith('bot')) {
+        color = 0xffaa00;
+      } else if (owner === 'zombie') {
+        color = 0x00ff55;
+      }
+      const mat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.95 });
+      const mesh = new THREE.Mesh(geom, mat);
+      return mesh;
+    };
+
+    const applySpread = (dir, spreadAmount) => {
+      if (!spreadAmount || spreadAmount <= 0) return dir.clone();
+      const spreadDir = dir.clone();
+      const randX = (Math.random() - 0.5) * spreadAmount;
+      const randY = (Math.random() - 0.5) * spreadAmount;
+      const randZ = (Math.random() - 0.5) * spreadAmount;
+      spreadDir.add(new THREE.Vector3(randX, randY, randZ)).normalize();
+      return spreadDir;
     };
 
     const spawnImpactSparks = (pos, color, count) => {
@@ -1636,111 +1586,27 @@ export default function FpsShooter3D() {
       scene.add(flash);
       setTimeout(() => { scene.remove(flash); }, 50);
 
-      const ray = new THREE.Ray(gunPos, shootDir);
-      let closestD = 99999;
-      let hitPt = gunPos.clone().addScaledVector(shootDir, 100);
-      let hitT = 'none';
-      let hitObj = null;
-
-      st.boundingBoxes.forEach((box) => {
-        const pt = new THREE.Vector3();
-        if (ray.intersectBox(box, pt)) {
-          const d = gunPos.distanceTo(pt);
-          if (d < closestD) {
-            closestD = d;
-            hitPt.copy(pt);
-            hitT = 'wall';
-          }
-        }
-      });
-
-      st.dummies.forEach((dummy) => {
-        const pt = new THREE.Vector3();
-        if (ray.intersectBox(dummy.box, pt)) {
-          const d = gunPos.distanceTo(pt);
-          if (d < closestD) {
-            closestD = d;
-            hitPt.copy(pt);
-            hitT = 'dummy';
-            hitObj = dummy;
-          }
-        }
-      });
-
-      st.bots.forEach((otherBot) => {
-        if (otherBot.id === bot.id || otherBot.isDead) return;
-        const pt = new THREE.Vector3();
-        if (ray.intersectBox(otherBot.box, pt)) {
-          const d = gunPos.distanceTo(pt);
-          if (d < closestD) {
-            closestD = d;
-            hitPt.copy(pt);
-            hitT = 'bot';
-            hitObj = otherBot;
-          }
-        }
-      });
-
-      // Check local player
-      const hostAABB = new THREE.Box3(
-        st.pos.clone().sub(new THREE.Vector3(0.35, 0.9, 0.35)),
-        st.pos.clone().add(new THREE.Vector3(0.35, 0.9, 0.35))
-      );
-      const hostPt = new THREE.Vector3();
-      if (ray.intersectBox(hostAABB, hostPt)) {
-        const d = gunPos.distanceTo(hostPt);
-        if (d < closestD) {
-          closestD = d;
-          hitPt.copy(hostPt);
-          hitT = 'player';
-        }
-      }
-
-      // Check remote guest player
-      if (st.connected) {
-        const guestAABB = new THREE.Box3(
-          st.oppPos.clone().sub(new THREE.Vector3(0.4, 0.9, 0.4)),
-          st.oppPos.clone().add(new THREE.Vector3(0.4, 0.9, 0.4))
-        );
-        const guestPt = new THREE.Vector3();
-        if (ray.intersectBox(guestAABB, guestPt)) {
-          const d = gunPos.distanceTo(guestPt);
-          if (d < closestD) {
-            closestD = d;
-            hitPt.copy(guestPt);
-            hitT = 'opponent';
-          }
-        }
-      }
-
-      // Tracer
-      const material = new THREE.LineBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.8 });
-      const points = [gunPos, hitPt];
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const tracer = new THREE.Line(geometry, material);
-      scene.add(tracer);
-      st.bulletsList.push({ mesh: tracer, age: 0, maxAge: 0.08 });
+      // Spawn traveling physical bot bullet
+      const bulletMesh = createBulletMesh('bot', st.team, 'ar');
+      bulletMesh.position.copy(gunPos);
+      scene.add(bulletMesh);
 
       const damage = Math.floor(5 + Math.random() * 6);
 
-      if (hitT === 'player') {
-        handleHitRef.current(damage);
-      } else if (hitT === 'opponent') {
-        if (connRef.current && st.connected) {
-          connRef.current.send({ type: 'hit', damage: damage });
-        }
-      } else if (hitT === 'bot') {
-        dealDamageToBot(hitObj, damage, bot.name);
-      } else if (hitT === 'dummy') {
-        hitObj.flashTimer = 0.2;
-        hitObj.torsoMesh.material.color.setHex(0xffff00);
-        hitObj.headMesh.material.color.setHex(0xffff00);
-        spawnImpactSparks(hitPt, 0xffff00, 5);
-        const pop = createDamagePopup(`-${damage}`, hitPt, '#ffff00');
-        st.damagePopups.push(pop);
-      } else if (hitT === 'wall') {
-        spawnImpactSparks(hitPt, 0xaaaaaa, 3);
-      }
+      st.bulletsList.push({
+        mesh: bulletMesh,
+        pos: gunPos.clone(),
+        dir: shootDir,
+        speed: 90,
+        owner: 'bot',
+        ownerId: bot.id,
+        damage: damage,
+        range: 100,
+        distanceTraveled: 0,
+        weaponId: 'ar',
+        age: 0,
+        maxAge: 2.0
+      });
 
       if (connRef.current && st.connected) {
         connRef.current.send({
@@ -1748,7 +1614,7 @@ export default function FpsShooter3D() {
           botId: bot.id,
           weaponId: 'ar',
           origin: { x: gunPos.x, y: gunPos.y, z: gunPos.z },
-          hitPt: { x: hitPt.x, y: hitPt.y, z: hitPt.z }
+          direction: { x: shootDir.x, y: shootDir.y, z: shootDir.z }
         });
       }
     };
@@ -1952,13 +1818,231 @@ export default function FpsShooter3D() {
         }
       }
 
-      // Update bullet tracers
+      // Update traveling bullets and check collisions
       for (let i = st.bulletsList.length - 1; i >= 0; i--) {
         const b = st.bulletsList[i];
         b.age += dt;
-        if (b.age >= b.maxAge) {
+
+        const moveDist = b.speed * dt;
+        const prevPos = b.pos.clone();
+        b.pos.addScaledVector(b.dir, moveDist);
+        b.mesh.position.copy(b.pos);
+        b.distanceTraveled += moveDist;
+
+        if (b.distanceTraveled >= b.range || b.age >= b.maxAge) {
           scene.remove(b.mesh);
           st.bulletsList.splice(i, 1);
+          continue;
+        }
+
+        const ray = new THREE.Ray(prevPos, b.dir);
+        let closestHit = null;
+        let closestDist = moveDist;
+        let hitType = '';
+        let hitObject = null;
+        let isHead = false;
+
+        // 1. Check walls
+        st.boundingBoxes.forEach((box) => {
+          const pt = new THREE.Vector3();
+          if (ray.intersectBox(box, pt)) {
+            const d = prevPos.distanceTo(pt);
+            if (d < closestDist) {
+              closestDist = d;
+              closestHit = pt.clone();
+              hitType = 'wall';
+            }
+          }
+        });
+
+        // 2. Check dummies
+        st.dummies.forEach((dummy) => {
+          const pt = new THREE.Vector3();
+          if (ray.intersectBox(dummy.box, pt)) {
+            const d = prevPos.distanceTo(pt);
+            if (d < closestDist) {
+              closestDist = d;
+              closestHit = pt.clone();
+              hitType = 'dummy';
+              hitObject = dummy;
+              isHead = (pt.y - dummy.group.position.y > 1.05);
+            }
+          }
+        });
+
+        // 3. Check bots
+        st.bots.forEach((bot) => {
+          if (bot.isDead) return;
+          if (b.owner === 'bot' && b.ownerId === bot.id) return;
+          const pt = new THREE.Vector3();
+          if (ray.intersectBox(bot.box, pt)) {
+            const d = prevPos.distanceTo(pt);
+            if (d < closestDist) {
+              closestDist = d;
+              closestHit = pt.clone();
+              hitType = 'bot';
+              hitObject = bot;
+              isHead = (pt.y - bot.group.position.y > 1.33);
+            }
+          }
+        });
+
+        // 4. Check opponent
+        if (st.connected && st.oppMesh && st.oppMesh.visible && b.owner !== 'opponent') {
+          const oppCenter = st.oppPos.clone();
+          const oppAABB = new THREE.Box3(
+            oppCenter.clone().sub(new THREE.Vector3(0.4, 0.9, 0.4)),
+            oppCenter.clone().add(new THREE.Vector3(0.4, 0.9, 0.4))
+          );
+          const pt = new THREE.Vector3();
+          if (ray.intersectBox(oppAABB, pt)) {
+            const d = prevPos.distanceTo(pt);
+            if (d < closestDist) {
+              closestDist = d;
+              closestHit = pt.clone();
+              hitType = 'opponent';
+              isHead = (pt.y - oppCenter.y > 0.65);
+            }
+          }
+        }
+
+        // 5. Check local player
+        if (b.owner !== 'player') {
+          const playerCenter = st.pos.clone();
+          const playerAABB = new THREE.Box3(
+            playerCenter.clone().sub(new THREE.Vector3(0.35, 0.9, 0.35)),
+            playerCenter.clone().add(new THREE.Vector3(0.35, 0.9, 0.35))
+          );
+          const pt = new THREE.Vector3();
+          if (ray.intersectBox(playerAABB, pt)) {
+            const d = prevPos.distanceTo(pt);
+            if (d < closestDist) {
+              closestDist = d;
+              closestHit = pt.clone();
+              hitType = 'player';
+            }
+          }
+        }
+
+        // 6. Check zombies
+        if (st.zombies) {
+          st.zombies.forEach((zombie) => {
+            if (b.owner === 'zombie') return;
+            const zBox = new THREE.Box3(
+              zombie.pos.clone().sub(new THREE.Vector3(0.35 * zombie.scale, 0.9 * zombie.scale, 0.35 * zombie.scale)),
+              zombie.pos.clone().add(new THREE.Vector3(0.35 * zombie.scale, 0.9 * zombie.scale, 0.35 * zombie.scale))
+            );
+            const pt = new THREE.Vector3();
+            if (ray.intersectBox(zBox, pt)) {
+              const d = prevPos.distanceTo(pt);
+              if (d < closestDist) {
+                closestDist = d;
+                closestHit = pt.clone();
+                hitType = 'zombie';
+                hitObject = zombie;
+                isHead = (pt.y - zombie.group.position.y > 1.05 * zombie.scale);
+              }
+            }
+          });
+        }
+
+        if (closestHit) {
+          scene.remove(b.mesh);
+          st.bulletsList.splice(i, 1);
+
+          const sparkColor = hitType === 'opponent' || hitType === 'player' ? 0xff0055 :
+                             hitType === 'zombie' ? 0x00ff55 :
+                             hitType === 'bot' ? 0xff3300 :
+                             hitType === 'dummy' ? 0xffff00 : 0xaaaaaa;
+          spawnImpactSparks(closestHit, sparkColor, hitType === 'wall' ? 4 : 12);
+
+          if (b.owner === 'player') {
+            let dmg = b.damage;
+            if (isHead) dmg = Math.floor(dmg * 2.2);
+
+            if (hitType === 'dummy') {
+              hitObject.flashTimer = 0.2;
+              hitObject.torsoMesh.material.color.setHex(0xffff00);
+              hitObject.headMesh.material.color.setHex(0xffff00);
+              const pop = createDamagePopup(`-${dmg}`, closestHit, '#ffff00');
+              st.damagePopups.push(pop);
+              playHitmarkerSound(isHead);
+            }
+            else if (hitType === 'bot') {
+              hitObject.flashTimer = 0.2;
+              hitObject.torsoMesh.material.color.setHex(0xffff00);
+              const pop = createDamagePopup(`-${dmg}`, closestHit, isHead ? '#ffff00' : '#ff3300');
+              st.damagePopups.push(pop);
+              playHitmarkerSound(isHead);
+
+              if (st.isHost) {
+                dealDamageToBotRef.current(hitObject, dmg, 'Player');
+              } else {
+                connRef.current.send({ type: 'bot_hit', botId: hitObject.id, damage: dmg });
+              }
+            }
+            else if (hitType === 'opponent') {
+              playHitmarkerSound(isHead);
+              if (connRef.current && st.connected) {
+                connRef.current.send({ type: 'hit', damage: dmg });
+              }
+            }
+            else if (hitType === 'zombie') {
+              playHitmarkerSound(isHead);
+              const pop = createDamagePopup(`-${dmg}`, closestHit, isHead ? '#facc15' : '#4ade80');
+              st.damagePopups.push(pop);
+
+              if (st.isHost) {
+                hitObject.hp = Math.max(0, hitObject.hp - dmg);
+                if (hitObject.type === 'boss') setBossHp(hitObject.hp);
+                
+                if (hitObject.hp <= 0) {
+                  scene.remove(hitObject.group);
+                  st.zombies = st.zombies.filter(z => z.id !== hitObject.id);
+                  setZombiesCount(st.zombies.length);
+                  addLog(`Zombie eliminated!`, true);
+                  
+                  if (hitObject.type === 'boss') {
+                    setBossHp(0);
+                    addLog(`Giant Boss defeated! Wave complete.`, true);
+                  }
+                  if (connRef.current && st.connected) {
+                    connRef.current.send({ type: 'zombie_death', zId: hitObject.id });
+                  }
+                } else {
+                  hitObject.flashTimer = 0.15;
+                  hitObject.torsoMesh.material.color.setHex(0xffff00);
+                  if (connRef.current && st.connected) {
+                    connRef.current.send({ type: 'zombie_hit_effect', zId: hitObject.id, hp: hitObject.hp });
+                  }
+                }
+              } else {
+                connRef.current.send({ type: 'zombie_hit', zId: hitObject.id, damage: dmg });
+              }
+            }
+          }
+          else if (b.owner.startsWith('bot')) {
+            if (st.isHost) {
+              if (hitType === 'player') {
+                handleHitRef.current(b.damage);
+              }
+              else if (hitType === 'opponent') {
+                if (connRef.current && st.connected) {
+                  connRef.current.send({ type: 'hit', damage: b.damage });
+                }
+              }
+              else if (hitType === 'bot') {
+                dealDamageToBotRef.current(hitObject, b.damage, 'Bot');
+              }
+              else if (hitType === 'dummy') {
+                hitObject.flashTimer = 0.2;
+                hitObject.torsoMesh.material.color.setHex(0xffff00);
+                hitObject.headMesh.material.color.setHex(0xffff00);
+                const pop = createDamagePopup(`-${b.damage}`, closestHit, '#ffff00');
+                st.damagePopups.push(pop);
+              }
+            }
+          }
         }
       }
 
@@ -2379,8 +2463,8 @@ export default function FpsShooter3D() {
       // --- LOCAL MOVEMENT PHYSICS ---
       if (!st.isDead && !st.showGameOver) {
         const moveVector = new THREE.Vector3(0, 0, 0);
-        const forward = new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw)).normalize();
-        const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+        const forward = new THREE.Vector3(-Math.sin(st.yaw), 0, -Math.cos(st.yaw)).normalize();
+        const right = new THREE.Vector3(Math.cos(st.yaw), 0, -Math.sin(st.yaw)).normalize();
 
         if (st.keys.w) moveVector.add(forward);
         if (st.keys.s) moveVector.sub(forward);
@@ -2596,9 +2680,9 @@ export default function FpsShooter3D() {
 
       // Camera view rotation LookAt
       const idealCamLook = new THREE.Vector3(
-        Math.sin(st.yaw) * Math.cos(st.pitch),
+        -Math.sin(st.yaw) * Math.cos(st.pitch),
         Math.sin(st.pitch),
-        Math.cos(st.yaw) * Math.cos(st.pitch)
+        -Math.cos(st.yaw) * Math.cos(st.pitch)
       ).normalize();
 
       if (st.cameraShake > 0) {

@@ -56,6 +56,7 @@ export default function GravityShooter() {
   const [phase, setPhase] = useState('menu');
   const [playerCount, setPlayerCount] = useState(2);
   const [winner, setWinner] = useState('');
+  const [playerHps, setPlayerHps] = useState([100, 100, 100, 100]);
   const stateRef = useRef({});
   const keysRef = useRef({});
 
@@ -69,6 +70,7 @@ export default function GravityShooter() {
       for (let i = 0; i < count; i++) players.push(createPlayer(i, count));
     }
     stateRef.current = { players, bullets: [], particles: [] };
+    setPlayerHps(new Array(count === 1 ? 2 : count).fill(MAX_HP));
     setWinner('');
     setPhase('playing');
   }, []);
@@ -202,6 +204,8 @@ export default function GravityShooter() {
           const dx = b.x - p.x, dy = b.y - p.y;
           if (dx * dx + dy * dy < (PLAYER_R + 4) ** 2) {
             p.hp -= BULLET_DMG;
+            if (p.hp <= 0) { p.alive = false; p.hp = 0; }
+            setPlayerHps(s.players.map(pl => pl.hp));
             // Knockback
             p.vx += b.vx * 0.3;
             p.vy += b.vy * 0.3;
@@ -214,7 +218,6 @@ export default function GravityShooter() {
                 life: 20, color: COLORS[i]
               });
             }
-            if (p.hp <= 0) { p.alive = false; p.hp = 0; }
             return false;
           }
         }
@@ -338,7 +341,7 @@ export default function GravityShooter() {
               {NAMES[i]}{p.isAI ? '🤖' : ''}
             </span>
             <div className="gshooter-hp-fill">
-              <div style={{ width: `${Math.max(0, p.hp)}%`, background: COLORS[i] }} />
+              <div style={{ width: `${Math.max(0, playerHps[i] !== undefined ? playerHps[i] : p.hp)}%`, background: COLORS[i] }} />
             </div>
           </div>
         ))}

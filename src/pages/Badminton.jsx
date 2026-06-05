@@ -447,8 +447,8 @@ export default function Badminton() {
 
           if (isServeLaunch) {
             // Powerful serve arc — easily clears the net
-            bx = player.isPlayer2 ? -18 : 18;
-            by = -14;
+            bx = player.isPlayer2 ? -12 : 12;
+            by = -11.5;
             spawnParticles(birdie.x, birdie.y, '#fff', 12, 4);
           } else {
             if (isSmash) {

@@ -95,6 +95,7 @@ export default function Racing() {
   const [peerErr, setPeerErr] = useState('');
   const [connected, setConnected] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [difficulty, setDifficulty] = useState('medium');
 
   // In-Game UI HUD states
   const [lap, setLap] = useState(1);
@@ -123,7 +124,7 @@ export default function Racing() {
     trackWidth: 9.0,
     
     // local player physics parameters
-    playerIndex: 0, // Assigned racer index on grid
+    playerIndex: 15, // Assigned racer index on grid (last place)
     pos: new THREE.Vector3(),
     angle: 0,
     speed: 0,
@@ -180,7 +181,7 @@ export default function Racing() {
     st.karts = [];
 
     const colorsList = ['#ff007f', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e', '#a855f7', '#06b6d4', '#22c55e', '#eab308', '#e11d48', '#d946ef', '#6366f1', '#475569'];
-    const namesList = ['PLAYER', 'GUEST 1', 'TurboBot', 'CyberDrift', 'NeonRider', 'Rival C', 'Rival D', 'Rival E', 'Rival F', 'Rival G', 'Rival H', 'Rival I', 'Rival J', 'Rival K', 'Rival L', 'Rival M'];
+    const namesList = ['Rival M', 'GUEST 1', 'TurboBot', 'CyberDrift', 'NeonRider', 'Rival C', 'Rival D', 'Rival E', 'Rival F', 'Rival G', 'Rival H', 'Rival I', 'Rival J', 'Rival K', 'Rival L', 'PLAYER'];
 
     for (let i = 0; i < 16; i++) {
       // Stagger spacing: place karts behind index 0 (e.g. index 400 - i*3)
@@ -194,14 +195,17 @@ export default function Racing() {
       const initialPos = pt.clone().addScaledVector(normal, offsetSide);
       initialPos.y = pt.y + 0.28;
 
+      const isPlayer = i === st.playerIndex;
+      const angleVal = Math.atan2(tangent.x, tangent.z);
+
       st.karts.push({
         index: i,
         name: namesList[i],
         color: colorsList[i],
         isRemoteHuman: false,
-        isLocalHuman: i === 0,
+        isLocalHuman: isPlayer,
         pos: initialPos,
-        angle: Math.PI * 0.9,
+        angle: angleVal,
         speed: 0,
         velocity: new THREE.Vector3(),
         driftAngle: 0,
@@ -678,9 +682,10 @@ export default function Racing() {
     const height = containerRef.current.clientHeight || window.innerHeight;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x05020c);
-    scene.fog = new THREE.FogExp2(0x05020c, 0.012);
+    scene.background = new THREE.Color(0x7dd3fc); // blue sky
+    scene.fog = new THREE.FogExp2(0x7dd3fc, 0.008);
     st.scene = scene;
+    st.difficulty = difficulty;
 
     const camera = new THREE.PerspectiveCamera(65, width / height || 1, 0.1, 1000);
     st.camera = camera;
@@ -707,25 +712,55 @@ export default function Racing() {
     window.addEventListener('resize', onResize);
 
     // Lights
-    const ambientLight = new THREE.AmbientLight(0x1a1230, 0.85);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xff00ff, 1.45);
-    dirLight.position.set(40, 80, 20);
+    const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.25); // sunlight
+    dirLight.position.set(200, 150, -300);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    const helperLight = new THREE.DirectionalLight(0x00ffff, 0.85);
-    helperLight.position.set(-40, 40, -40);
+    const helperLight = new THREE.DirectionalLight(0xe0f2fe, 0.45);
+    helperLight.position.set(-100, 100, 100);
     scene.add(helperLight);
 
-    // Synthwave floor grids
+    // Warm Sun sphere in the sky
+    const sunGeom = new THREE.SphereGeometry(15, 16, 16);
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfffbeb });
+    const sun = new THREE.Mesh(sunGeom, sunMat);
+    sun.position.set(200, 150, -300);
+    scene.add(sun);
+
+    // Volumetric clouds
+    const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true });
+    for (let c = 0; c < 25; c++) {
+      const cloudGroup = new THREE.Group();
+      const numSpheres = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < numSpheres; i++) {
+        const r = 4 + Math.random() * 5;
+        const sMesh = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), cloudMat);
+        sMesh.position.set(
+          (Math.random() - 0.5) * 8,
+          (Math.random() - 0.5) * 3,
+          (Math.random() - 0.5) * 8
+        );
+        cloudGroup.add(sMesh);
+      }
+      const cx = (Math.random() - 0.5) * 800;
+      const cy = 40 + Math.random() * 30;
+      const cz = (Math.random() - 0.5) * 800;
+      cloudGroup.position.set(cx, cy, cz);
+      scene.add(cloudGroup);
+    }
+
+    // Grass floor plane instead of synth grids
     const gridFloor = new THREE.Mesh(
-      new THREE.PlaneGeometry(1000, 1000, 40, 40),
-      new THREE.MeshBasicMaterial({ color: 0x1c0f3d, wireframe: true, transparent: true, opacity: 0.28 })
+      new THREE.PlaneGeometry(1500, 1500),
+      new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.9 })
     );
     gridFloor.rotation.x = -Math.PI / 2;
     gridFloor.position.y = -0.05;
+    gridFloor.receiveShadow = true;
     scene.add(gridFloor);
 
     // Road procedural creation
@@ -811,47 +846,78 @@ export default function Racing() {
     centerLine.position.y = 0.03;
     scene.add(centerLine);
 
-    // Chassis builder
+    // Chassis builder - Sleek Lamborghini Testarossa Supercar
     function buildGoKart(colorHex) {
-      const kart = new THREE.Group();
-      const basePlate = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.16, 2.3), new THREE.MeshStandardMaterial({ color: 0x222226, metalness: 0.85 }));
-      basePlate.position.y = 0.28;
-      kart.add(basePlate);
+      const car = new THREE.Group();
+      
+      // Base plate / undercarriage
+      const basePlate = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.16, 2.5), 
+        new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.85 })
+      );
+      basePlate.position.y = 0.22;
+      car.add(basePlate);
 
-      const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.62, roughness: 0.15 });
+      const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.65, roughness: 0.18 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x030712, roughness: 0.1, metalness: 0.9 });
+      const lightMat = new THREE.MeshBasicMaterial({ color: 0xff3b30 }); // red brake strip
 
-      const nose = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.65), bodyMat);
-      nose.position.set(0, 0.36, -0.95);
-      kart.add(nose);
+      // Wedge sloped nose
+      const nose = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.15, 0.95), bodyMat);
+      nose.position.set(0, 0.28, -0.75);
+      car.add(nose);
 
-      const fWing = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.08, 0.32), bodyMat);
-      fWing.position.set(0, 0.22, -1.35);
-      kart.add(fWing);
+      // Sleek passenger canopy
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.4, 1.05), glassMat);
+      cabin.position.set(0, 0.52, 0.2);
+      car.add(cabin);
 
-      const lPod = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 1.25), bodyMat);
-      lPod.position.set(-0.64, 0.36, 0);
-      kart.add(lPod);
+      // Side Pod Left (with strakes)
+      const lPod = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.35, 1.35), bodyMat);
+      lPod.position.set(-0.72, 0.3, 0);
+      car.add(lPod);
 
-      const rPod = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 1.25), bodyMat);
-      rPod.position.set(0.64, 0.36, 0);
-      kart.add(rPod);
+      // Side Pod Right (with strakes)
+      const rPod = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.35, 1.35), bodyMat);
+      rPod.position.set(0.72, 0.3, 0);
+      car.add(rPod);
 
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.62, 0.52), new THREE.MeshStandardMaterial({ color: 0x121214 }));
-      seat.position.set(0, 0.58, 0.35);
-      kart.add(seat);
+      // Add Testarossa style horizontal strakes (black strips) on side pods
+      for (let sIdx = 0; sIdx < 3; sIdx++) {
+        const offset = -0.06 + sIdx * 0.08;
+        const strakeL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 1.25), darkMat);
+        strakeL.position.set(-0.82, 0.3 + offset, 0);
+        car.add(strakeL);
 
-      const spoiler = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.08, 0.48), bodyMat);
-      spoiler.position.set(0, 1.2, 1.15);
-      kart.add(spoiler);
+        const strakeR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 1.25), darkMat);
+        strakeR.position.set(0.82, 0.3 + offset, 0);
+        car.add(strakeR);
+      }
+
+      // Rear Engine Deck
+      const rearDeck = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.28, 0.65), bodyMat);
+      rearDeck.position.set(0, 0.36, 0.9);
+      car.add(rearDeck);
+
+      // Rear Grille panel (black horizontal slot design)
+      const grille = new THREE.Mesh(new THREE.BoxGeometry(1.26, 0.24, 0.04), darkMat);
+      grille.position.set(0, 0.36, 1.22);
+      car.add(grille);
+
+      // Glowing red neon brake light strip across back (Testarossa style!)
+      const brakeLight = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.05, 0.04), lightMat);
+      brakeLight.position.set(0, 0.42, 1.24);
+      car.add(brakeLight);
 
       // Wheels
       const wheelsList = [];
-      const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.88 });
+      const tireMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.88 });
       const wPositions = [
-        { x: -0.68, y: 0.28, z: -0.72, isFront: true },
-        { x: 0.68, y: 0.28, z: -0.72, isFront: true },
-        { x: -0.72, y: 0.35, z: 0.75, isFront: false },
-        { x: 0.72, y: 0.35, z: 0.75, isFront: false }
+        { x: -0.66, y: 0.28, z: -0.72, isFront: true },
+        { x: 0.66, y: 0.28, z: -0.72, isFront: true },
+        { x: -0.7, y: 0.34, z: 0.76, isFront: false },
+        { x: 0.7, y: 0.34, z: 0.76, isFront: false }
       ];
 
       wPositions.forEach((wp) => {
@@ -864,12 +930,12 @@ export default function Racing() {
         tire.rotation.z = Math.PI / 2;
         wGroup.add(tire);
 
-        kart.add(wGroup);
+        car.add(wGroup);
         wheelsList.push({ mesh: wGroup, isFront: wp.isFront, radius });
       });
 
-      scene.add(kart);
-      return { model: kart, wheels: wheelsList };
+      scene.add(car);
+      return { model: car, wheels: wheelsList };
     }
 
     // Populate karts onto grid
@@ -886,8 +952,104 @@ export default function Racing() {
       k.modelGroup = build.model;
       k.wheelsList = build.wheels;
       k.modelGroup.position.copy(k.pos);
-      k.modelGroup.rotation.y = k.angle;
+      k.modelGroup.rotation.y = k.angle + Math.PI; // Rotated model representation
     });
+
+    // Populate tiered stands and animated cylinder fans next to the track
+    const standSteps = [0, 150, 300, 450, 600, 750];
+    standSteps.forEach(step => {
+      const p = st.trackCurve.getPointAt(step / TOTAL_SPLINE_STEPS);
+      const tangent = st.trackCurve.getTangentAt(step / TOTAL_SPLINE_STEPS);
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      
+      for (const side of [-1, 1]) {
+        const standPos = p.clone().addScaledVector(normal, side * (st.trackWidth / 2 + 5));
+        
+        const standGroup = new THREE.Group();
+        standGroup.position.copy(standPos);
+        standGroup.lookAt(p);
+        
+        const standWidth = 14;
+        const concreteMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.5 });
+        
+        // Tier 1
+        const tier1 = new THREE.Mesh(new THREE.BoxGeometry(standWidth, 0.8, 1.6), concreteMat);
+        tier1.position.set(0, 0.4, 0);
+        standGroup.add(tier1);
+        
+        // Tier 2
+        const tier2 = new THREE.Mesh(new THREE.BoxGeometry(standWidth - 0.5, 1.6, 1.6), concreteMat);
+        tier2.position.set(0, 0.8, 1.4);
+        standGroup.add(tier2);
+        
+        // Tier 3
+        const tier3 = new THREE.Mesh(new THREE.BoxGeometry(standWidth - 1.0, 2.4, 1.6), concreteMat);
+        tier3.position.set(0, 1.2, 2.8);
+        standGroup.add(tier3);
+        
+        // Pillars
+        const pMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+        const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4.8), pMat);
+        p1.position.set(-standWidth/2 + 0.6, 2.4, -0.6);
+        standGroup.add(p1);
+        const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4.8), pMat);
+        p2.position.set(standWidth/2 - 0.6, 2.4, -0.6);
+        standGroup.add(p2);
+        const p3 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4.8), pMat);
+        p3.position.set(-standWidth/2 + 0.6, 2.4, 3.2);
+        standGroup.add(p3);
+        const p4 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4.8), pMat);
+        p4.position.set(standWidth/2 - 0.6, 2.4, 3.2);
+        standGroup.add(p4);
+        
+        // Slanted Roof
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(standWidth + 1.2, 0.15, 6.0), roofMat);
+        roof.position.set(0, 4.8, 1.3);
+        roof.rotation.x = -0.16;
+        standGroup.add(roof);
+        
+        // Spectator Fans
+        const fanGeom = new THREE.CylinderGeometry(0.18, 0.18, 0.55, 8);
+        const headGeom = new THREE.SphereGeometry(0.14, 8, 8);
+        const colors = [0xef4444, 0x3b82f6, 0x10b981, 0xf59e0b, 0x8b5cf6, 0xec4899, 0x14b8a6, 0xf43f5e];
+        const numFans = 12 + Math.floor(Math.random() * 15);
+        for (let f = 0; f < numFans; f++) {
+          const tierIdx = Math.floor(Math.random() * 3);
+          const fanColor = colors[Math.floor(Math.random() * colors.length)];
+          const fanMat = new THREE.MeshStandardMaterial({ color: fanColor, roughness: 0.6 });
+          const skinMat = new THREE.MeshStandardMaterial({ color: 0xffd3b6 });
+          
+          const fanBody = new THREE.Mesh(fanGeom, fanMat);
+          const fanHead = new THREE.Mesh(headGeom, skinMat);
+          fanHead.position.y = 0.35;
+          fanBody.add(fanHead);
+          
+          const lx = (Math.random() - 0.5) * (standWidth - 2.5);
+          const ly = tierIdx === 0 ? 0.8 : (tierIdx === 1 ? 1.6 : 2.4);
+          const lz = tierIdx === 0 ? 0 : (tierIdx === 1 ? 1.4 : 2.8);
+          fanBody.position.set(lx, ly + 0.28, lz);
+          
+          fanBody.rotation.y = (Math.random() - 0.5) * 0.4;
+          standGroup.add(fanBody);
+        }
+        
+        scene.add(standGroup);
+      }
+    });
+
+    // Set initial camera position directly behind local player kart on start
+    const player = st.karts[st.playerIndex];
+    if (player) {
+      const heading = player.angle;
+      camera.position.copy(player.pos).add(new THREE.Vector3(
+        Math.sin(heading) * -4.5,
+        2.1,
+        Math.cos(heading) * -4.5
+      ));
+      const targetLook = player.pos.clone().add(new THREE.Vector3(Math.sin(heading) * 4.5, 0.8, Math.cos(heading) * 4.5));
+      camera.lookAt(targetLook);
+    }
 
     // Populate track items (glowing item boxes and boost zippers)
     st.powerupBoxes = [];
@@ -1198,7 +1360,7 @@ export default function Racing() {
               k.pos.addScaledVector(k.velocity, dt);
 
               k.modelGroup.position.copy(k.pos);
-              k.modelGroup.rotation.y = k.angle + k.driftAngle;
+              k.modelGroup.rotation.y = k.angle + k.driftAngle + Math.PI; // Face forward direction
             }
 
             if (k.boostTimer > 0) {
@@ -1286,7 +1448,21 @@ export default function Racing() {
               });
               k.splineProgressIndex = closestIdx;
 
-              const targetSeg = (closestIdx + 12) % TOTAL_SPLINE_STEPS;
+              let lookAhead = 12;
+              let turnClamp = 2.5;
+              let diffSpeedMult = 1.0;
+              
+              if (st.difficulty === 'easy') {
+                lookAhead = 18;
+                turnClamp = 1.8;
+                diffSpeedMult = 0.78;
+              } else if (st.difficulty === 'hard') {
+                lookAhead = 9;
+                turnClamp = 3.5;
+                diffSpeedMult = 1.25;
+              }
+
+              const targetSeg = (closestIdx + lookAhead) % TOTAL_SPLINE_STEPS;
               const targetPt = st.curvePoints[targetSeg];
 
               const dir = targetPt.clone().sub(k.pos).normalize();
@@ -1296,10 +1472,10 @@ export default function Racing() {
               while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
               while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
 
-              k.angle += THREE.MathUtils.clamp(angleDiff, -2.5 * dt, 2.5 * dt);
+              k.angle += THREE.MathUtils.clamp(angleDiff, -turnClamp * dt, turnClamp * dt);
 
-              // Max speed
-              const targetSpd = (16.2 + k.skill * 4) * (minDist > st.trackWidth / 2 ? 0.35 : 1.0) * k.scale;
+              // Max speed based on difficulty settings
+              const targetSpd = (16.2 + k.skill * 4) * diffSpeedMult * (minDist > st.trackWidth / 2 ? 0.35 : 1.0) * k.scale;
               k.speed = THREE.MathUtils.lerp(k.speed, targetSpd, dt * 3);
 
               k.velocity.set(Math.sin(k.angle) * k.speed, 0, Math.cos(k.angle) * k.speed);
@@ -1307,7 +1483,7 @@ export default function Racing() {
               
               k.pos.y = st.curvePoints[closestIdx].y + 0.28;
               k.modelGroup.position.copy(k.pos);
-              k.modelGroup.rotation.y = k.angle;
+              k.modelGroup.rotation.y = k.angle + Math.PI; // Face forward direction
 
               // AI use powerups automatically
               if (k.activePowerup) {
@@ -1345,7 +1521,7 @@ export default function Racing() {
           } else if (k.modelGroup) {
             // Guest clients or pre-match: update visual models to match synced/initial values
             k.modelGroup.position.copy(k.pos);
-            k.modelGroup.rotation.y = k.angle;
+            k.modelGroup.rotation.y = k.angle + Math.PI; // Face forward direction
           }
         }
 
@@ -1500,6 +1676,24 @@ export default function Racing() {
                 <div className={`racing-option-card ${selectedMode === 'mp' ? 'active' : ''}`} onClick={() => setSelectedMode('mp')}>
                   <div className="racing-card-title">Multiplayer</div>
                   <div className="racing-card-desc">WebRTC P2P hosting rooms</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="racing-select-section">
+              <label>Select Difficulty</label>
+              <div className="racing-options-grid">
+                <div className={`racing-option-card ${difficulty === 'easy' ? 'active' : ''}`} onClick={() => setDifficulty('easy')}>
+                  <div className="racing-card-title">Easy</div>
+                  <div className="racing-card-desc">Slower AI opponents</div>
+                </div>
+                <div className={`racing-option-card ${difficulty === 'medium' ? 'active' : ''}`} onClick={() => setDifficulty('medium')}>
+                  <div className="racing-card-title">Medium</div>
+                  <div className="racing-card-desc">Standard AI racing speed</div>
+                </div>
+                <div className={`racing-option-card ${difficulty === 'hard' ? 'active' : ''}`} onClick={() => setDifficulty('hard')}>
+                  <div className="racing-card-title">Hard</div>
+                  <div className="racing-card-desc">Maximum speed & tight racing lines</div>
                 </div>
               </div>
             </div>

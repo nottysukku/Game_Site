@@ -370,7 +370,7 @@ export default function Pool() {
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(cue.x, cue.y);
-          ctx.lineTo(cue.x - Math.cos(angle) * 200, cue.y - Math.sin(angle) * 200);
+          ctx.lineTo(cue.x + Math.cos(angle) * 200, cue.y + Math.sin(angle) * 200);
           ctx.stroke();
           ctx.setLineDash([]);
         }

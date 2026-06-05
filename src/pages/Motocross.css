@@ -1,0 +1,32 @@
+.motocross-root {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100vh; background: #0a0e1a; color: #eee; font-family: 'Segoe UI', sans-serif;
+  overflow: hidden; position: relative;
+}
+.motocross-root canvas {
+  border: 2px solid #ffd74044; border-radius: 8px;
+  background: linear-gradient(180deg, #1a2a44 0%, #3a1a2a 50%, #5a4a20 100%);
+}
+.motocross-hud {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 28px; font-size: 1.1rem; z-index: 2;
+  background: rgba(10,14,26,.85); padding: 8px 24px; border-radius: 10px;
+  border: 1px solid #ffd74044;
+}
+.motocross-hud span { color: #ffd740; font-weight: 700; }
+.motocross-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; background: rgba(0,0,0,.8);
+  z-index: 5; gap: 14px;
+}
+.motocross-overlay h2 { font-size: 2.5rem; color: #ffd740; margin: 0; text-shadow: 0 0 20px #ffd740; }
+.motocross-overlay p { color: #aaa; font-size: 1.1rem; margin: 0; }
+.motocross-overlay button {
+  padding: 12px 36px; font-size: 1.1rem; background: #ffd740; color: #000;
+  border: none; border-radius: 8px; font-weight: 700; cursor: pointer;
+}
+.motocross-overlay button:hover { background: #ffc107; }
+.motocross-controls {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  color: #666; font-size: .85rem; z-index: 2;
+}

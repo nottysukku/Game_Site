@@ -529,7 +529,7 @@ export default function Racing() {
     }
     else if (type === 'banana') {
       // Spawn banana peel behind kart
-      const spawnPos = player.pos.clone().subScaledVector(forward, 1.8);
+      const spawnPos = player.pos.clone().addScaledVector(forward, -1.8);
       spawnPos.y = TRACK_CURVE.getPointAt(player.splineProgressIndex / TOTAL_SPLINE_STEPS).y + 0.05;
 
       const bananaGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.05, 12);
@@ -644,6 +644,28 @@ export default function Racing() {
     if (phase !== 'playing' || !containerRef.current) return;
 
     const st = stateRef.current;
+
+    // Reset game state for replay
+    st.lap = 1;
+    st.speed = 0;
+    st.score = 0;
+    st.activePowerup = null;
+    st.matchStarted = false;
+    st.countdown = -1;
+    st.currentLapTimes = [];
+    st.cameraShake = 0;
+    st.hazards = [];
+    st.projectiles = [];
+    st.particleSystems = [];
+    setLap(1);
+    setSpeed(0);
+    setScore(0);
+    setActivePowerup(null);
+    setLapTimes([]);
+    setCountdownState(-1);
+    setShowGoBanner(false);
+    setLeaderboard([]);
+    setRankText('1st');
     
     // Set parameters
     const trackInfo = TRACKS_CONFIG[selectedTrack];
@@ -651,15 +673,16 @@ export default function Racing() {
     st.curvePoints = st.trackCurve.getPoints(TOTAL_SPLINE_STEPS);
     st.trackWidth = trackInfo.width;
 
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+    // Use window dimensions as fallback when container hasn't laid out yet
+    const width = containerRef.current.clientWidth || window.innerWidth;
+    const height = containerRef.current.clientHeight || window.innerHeight;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x05020c);
     scene.fog = new THREE.FogExp2(0x05020c, 0.012);
     st.scene = scene;
 
-    const camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(65, width / height || 1, 0.1, 1000);
     st.camera = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -672,6 +695,16 @@ export default function Racing() {
 
     const clock = new THREE.Clock();
     st.clock = clock;
+
+    // Resize handler
+    const onResize = () => {
+      const w = containerRef.current ? containerRef.current.clientWidth || window.innerWidth : window.innerWidth;
+      const h = containerRef.current ? containerRef.current.clientHeight || window.innerHeight : window.innerHeight;
+      camera.aspect = w / h || 1;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener('resize', onResize);
 
     // Lights
     const ambientLight = new THREE.AmbientLight(0x1a1230, 0.85);
@@ -893,7 +926,8 @@ export default function Racing() {
           mesh: bMesh,
           pos: spawnPos,
           active: true,
-          respawnTimer: 0
+          respawnTimer: 0,
+          radius: 1.2
         });
       });
     });
@@ -921,7 +955,8 @@ export default function Racing() {
         type: 'zipper',
         mesh: zipMesh,
         pos: spawnPos,
-        active: true
+        active: true,
+        radius: 2.0
       });
     });
 
@@ -1307,6 +1342,10 @@ export default function Racing() {
               k.checkpointPassed = false;
               k.lap += 1;
             }
+          } else if (k.modelGroup) {
+            // Guest clients or pre-match: update visual models to match synced/initial values
+            k.modelGroup.position.copy(k.pos);
+            k.modelGroup.rotation.y = k.angle;
           }
         }
 
@@ -1391,6 +1430,7 @@ export default function Racing() {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('resize', onResize);
       cancelAnimationFrame(st.animId);
       
       scene.traverse((obj) => {
@@ -1658,9 +1698,9 @@ export default function Racing() {
             {countdownState >= 0 && (
               <div className="racing-traffic-lights-overlay">
                 <div className="racing-traffic-lights-box">
-                  <div className={`racing-light-bulb red ${countdownState >= 3 ? 'active' : ''}`} />
-                  <div className={`racing-light-bulb orange ${countdownState >= 2 ? 'active' : ''}`} />
-                  <div className={`racing-light-bulb green ${countdownState >= 1 ? 'active' : ''}`} />
+                  <div className={`racing-light-bulb red ${countdownState >= 1 ? 'active' : ''}`} />
+                  <div className={`racing-light-bulb orange ${countdownState >= 1 && countdownState <= 2 ? 'active' : ''}`} />
+                  <div className={`racing-light-bulb green ${countdownState === 0 ? 'active' : ''}`} />
                 </div>
               </div>
             )}

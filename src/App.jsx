@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+﻿import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
 
@@ -34,6 +34,16 @@ const TowerOfHanoi = lazy(() => import('./pages/TowerOfHanoi'));
 const Reversi = lazy(() => import('./pages/Reversi'));
 const DoodleJump = lazy(() => import('./pages/DoodleJump'));
 const ReactionTest = lazy(() => import('./pages/ReactionTest'));
+const Motocross = lazy(() => import('./pages/Motocross'));
+const GravityShooter = lazy(() => import('./pages/GravityShooter'));
+const SuperMario = lazy(() => import('./pages/SuperMario'));
+const Pool = lazy(() => import('./pages/Pool'));
+const PacMan = lazy(() => import('./pages/PacMan'));
+const FruitNinja = lazy(() => import('./pages/FruitNinja'));
+const Bomberman = lazy(() => import('./pages/Bomberman'));
+const GeometryDash = lazy(() => import('./pages/GeometryDash'));
+const CandyCrush = lazy(() => import('./pages/CandyCrush'));
+const AgarIO = lazy(() => import('./pages/AgarIO'));
 const GravityGuyRush = lazy(() => import('./pages/GravityGuyRush'));
 const PocketTanks3D = lazy(() => import('./pages/PocketTanks3D'));
 const NeonTagArena = lazy(() => import('./pages/NeonTagArena'));
@@ -61,7 +71,7 @@ function Loader() {
   return (
     <div className="global-loader">
       <div className="loader-spinner" />
-      <p>Loading…</p>
+      <p>Loading...</p>
     </div>
   );
 }
@@ -102,6 +112,16 @@ export default function App() {
         <Route path="/reversi" element={<Reversi />} />
         <Route path="/doodlejump" element={<DoodleJump />} />
         <Route path="/reactiontest" element={<ReactionTest />} />
+        <Route path="/motocross" element={<Motocross />} />
+        <Route path="/gravityshooter" element={<GravityShooter />} />
+        <Route path="/supermario" element={<SuperMario />} />
+        <Route path="/pool" element={<Pool />} />
+        <Route path="/pacman" element={<PacMan />} />
+        <Route path="/fruitninja" element={<FruitNinja />} />
+        <Route path="/bomberman" element={<Bomberman />} />
+        <Route path="/geometrydash" element={<GeometryDash />} />
+        <Route path="/candycrush" element={<CandyCrush />} />
+        <Route path="/agario" element={<AgarIO />} />
         <Route path="/gravityguyrush" element={<GravityGuyRush />} />
         <Route path="/pockettanks3d" element={<PocketTanks3D />} />
         <Route path="/neontagarena" element={<NeonTagArena />} />
@@ -127,3 +147,4 @@ export default function App() {
     </Suspense>
   );
 }
+

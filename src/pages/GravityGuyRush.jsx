@@ -448,7 +448,9 @@ export default function GravityGuyRush() {
   const [timeLeft, setTimeLeft] = useState(4);
   const [scores, setScores] = useState([0, 0, 0, 0]);
   const [speed, setSpeed] = useState(BASE_SPEED);
+  const [distance, setDistance] = useState(0);
   const [status, setStatus] = useState('All runners share one path. Last runner standing wins.');
+  const hudThrottleRef = useRef(0);
 
   useEffect(() => {
     const onKeyDown = e => {
@@ -607,8 +609,8 @@ export default function GravityGuyRush() {
     engine.onResize = () => {
       if (!mountRef.current) return;
 
-      const width = mountRef.current.clientWidth;
-      const height = mountRef.current.clientHeight;
+      const width = mountRef.current.clientWidth || window.innerWidth;
+      const height = mountRef.current.clientHeight || window.innerHeight;
       const worldHeight = layout.worldHeight;
       const worldWidth = worldHeight * (width / Math.max(1, height));
 
@@ -794,25 +796,33 @@ export default function GravityGuyRush() {
 
       const bob = player.flipClock > 0 ? 0 : Math.sin(player.runClock * 2) * 0.07;
       player.mesh.position.y = player.y + player.visualOffset + bob;
-      engine.scoresRef[i] = player.alive ? 1 : 0;
+      if (player.alive) {
+        player.score += engine.speed * dt;
+        engine.scoresRef[i] = player.score;
+      }
     }
 
     const deadCount = engine.players.slice(0, engine.playerCount).filter(player => !player.alive).length;
+    const alivePlayers = engine.players.slice(0, engine.playerCount).filter(player => player.alive);
     engine.trooperX = Math.min(
       TROOPER_CATCH_X,
       engine.trooperX + dt * (0.055 + engine.elapsed * 0.006 + deadCount * 0.014)
     );
     engine.trooper.group.position.x = engine.trooperX;
-    engine.trooper.group.position.y = sideY(engine.layout, 0, 'floor') + Math.sin(engine.elapsed * 8) * 0.08;
+    // Trooper follows the gravity side of the first alive player for visual coherence
+    const trooperSide = alivePlayers.length > 0 ? alivePlayers[0].side : 'floor';
+    const trooperTargetY = sideY(engine.layout, 0, trooperSide);
+    engine.trooper.group.position.y = trooperTargetY + Math.sin(engine.elapsed * 8) * 0.08;
+    engine.trooper.group.rotation.z = trooperSide === 'floor' ? 0 : Math.PI;
     engine.trooper.warning.scale.x = 0.85 + Math.sin(engine.elapsed * 10) * 0.15;
 
-    if (engine.trooperX >= TROOPER_CATCH_X - 0.02) {
+    if (engine.trooperX >= TROOPER_CATCH_X - 0.02 && !engine.trooperCaught) {
+      engine.trooperCaught = true;
       for (let p = 0; p < engine.playerCount; p += 1) {
         const player = engine.players[p];
         if (player?.alive) {
           player.alive = false;
           player.mesh.visible = false;
-          engine.scoresRef[p] = 0;
         }
       }
       setStatus('The Gravity Trooper swept the path.');
@@ -832,15 +842,16 @@ export default function GravityGuyRush() {
         if (closeX && closeY) {
           player.alive = false;
           player.mesh.visible = false;
-          engine.scoresRef[p] = 0;
-          setStatus(`${PLAYER_LABELS[p]} crashed.`);
+          setStatus(`${PLAYER_LABELS[p]} crashed at distance ${Math.round(player.score)}.`);
         }
       }
 
       if (!obstacle.passed && obstacle.mesh.position.x < PLAYER_X - 1) {
         obstacle.passed = true;
-        engine.players.forEach((player, index) => {
-          engine.scoresRef[index] = player?.alive ? 1 : 0;
+        engine.players.forEach((player) => {
+          if (player?.alive) {
+            player.score += obstacle.passBonus;
+          }
         });
       }
 
@@ -850,11 +861,17 @@ export default function GravityGuyRush() {
       }
     }
 
-    const aliveCount = engine.players.slice(0, engine.playerCount).filter(player => player.alive).length;
+    const aliveCount = alivePlayers.length;
 
-    setTimeLeft(aliveCount);
-    setScores([...engine.scoresRef]);
-    setSpeed(engine.speed);
+    // Throttle HUD state updates to ~10fps to avoid excessive React re-renders
+    hudThrottleRef.current -= dt;
+    if (hudThrottleRef.current <= 0) {
+      hudThrottleRef.current = 0.1;
+      setTimeLeft(aliveCount);
+      setScores(engine.players.map(p => Math.round(p.score)));
+      setSpeed(engine.speed);
+      setDistance(Math.round(engine.elapsed * engine.speed * 0.5));
+    }
 
     engine.renderer.render(engine.scene, engine.camera);
 
@@ -872,10 +889,12 @@ export default function GravityGuyRush() {
     if (!engine) return;
 
     latchRef.current = {};
+    hudThrottleRef.current = 0;
     setPhase('playing');
     setTimeLeft(playerCount);
-    setScores([1, 1, 1, 1]);
+    setScores(Array(playerCount).fill(0));
     setSpeed(BASE_SPEED);
+    setDistance(0);
     setStatus('Race live. Flip only on a surface, dodge shared blockers, and outrun the trooper.');
 
     engine.animFrame = requestAnimationFrame(animateFrame);
@@ -891,6 +910,7 @@ export default function GravityGuyRush() {
     setTimeLeft(playerCount);
     setScores([0, 0, 0, 0]);
     setSpeed(BASE_SPEED);
+    setDistance(0);
     setStatus('All runners share one path. Last runner standing wins.');
   }
 
@@ -921,12 +941,12 @@ export default function GravityGuyRush() {
 
       {phase === 'playing' && (
         <div className="m3-hud">
-          <div className="m3-time">Alive: {timeLeft}/{playerCount} | Speed: {speed.toFixed(1)}</div>
+          <div className="m3-time">Alive: {timeLeft}/{playerCount} | Speed: {speed.toFixed(1)} | Dist: {distance}</div>
           <div className="m3-score-row">
             {scores.slice(0, playerCount).map((score, index) => (
               <div key={PLAYER_LABELS[index]} className="m3-score-card">
                 <span>{PLAYER_LABELS[index]}</span>
-                <strong>{score ? 'ALIVE' : 'OUT'}</strong>
+                <strong>{score > 0 ? score : 'OUT'}</strong>
               </div>
             ))}
           </div>
@@ -939,6 +959,7 @@ export default function GravityGuyRush() {
         <div className="m3-overlay">
           <h2>Race Complete</h2>
           <p>{status}</p>
+          <p>Distance: {distance} | Best Score: {Math.max(...scores.slice(0, playerCount))}</p>
           <p>Shared path elimination with a pursuing Gravity Trooper.</p>
           <button className="m3-main-btn" onClick={startGame}>Rematch</button>
           <button className="m3-alt-btn" onClick={resetToMenu}>Main Menu</button>

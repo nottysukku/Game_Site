@@ -43,7 +43,7 @@ const categories = [
 
 const games = [
   { path: '/pong', title: 'Pong', desc: 'Classic paddle vs AI', color: '#00e5ff', category: 'retro_arcade' },
-  { path: '/tictactoe', title: 'Tic-Tac-Toe', desc: '3×3, play X vs AI', color: '#f06292', category: 'board_puzzle' },
+  { path: '/tictactoe', title: 'Tic-Tac-Toe', desc: '3x3, play X vs AI', color: '#f06292', category: 'board_puzzle' },
   { path: '/rps', title: 'Rock Paper Scissors', desc: 'Animated showdown vs CPU', color: '#ffd740', category: 'retro_arcade' },
   { path: '/snake', title: 'Snake', desc: 'Classic single-player', color: '#69f0ae', category: 'retro_arcade' },
   { path: '/racing', title: '3D Racing', desc: 'Fast-paced 3D car racing', color: '#ff5252', category: 'sports_racing' },
@@ -61,7 +61,7 @@ const games = [
   { path: '/2048', title: '2048', desc: 'Slide & merge number tiles', color: '#f9a825', category: 'board_puzzle' },
   { path: '/wordle', title: 'Wordle', desc: 'Guess the 5-letter word', color: '#66bb6a', category: 'board_puzzle' },
   { path: '/connectfour', title: 'Connect Four', desc: 'Drop discs, connect 4 to win', color: '#1565c0', category: 'board_puzzle' },
-  { path: '/sudoku', title: 'Sudoku', desc: '9×9 number puzzle', color: '#90caf9', category: 'board_puzzle' },
+  { path: '/sudoku', title: 'Sudoku', desc: '9x9 number puzzle', color: '#90caf9', category: 'board_puzzle' },
   { path: '/memorymatch', title: 'Memory Match', desc: 'Flip & match emoji pairs', color: '#f48fb1', category: 'card_casual' },
   { path: '/tetris', title: 'Tetris', desc: 'Classic falling blocks', color: '#00e5ff', category: 'retro_arcade' },
   { path: '/spaceinvaders', title: 'Space Invaders', desc: 'Shoot waves of aliens', color: '#69f0ae', category: 'retro_arcade' },
@@ -73,6 +73,16 @@ const games = [
   { path: '/reversi', title: 'Reversi', desc: 'Othello board game vs AI', color: '#69f0ae', category: 'board_puzzle' },
   { path: '/doodlejump', title: 'Doodle Jump', desc: 'Endless vertical platformer', color: '#b9f6ca', category: 'sports_racing' },
   { path: '/reactiontest', title: 'Reaction Time', desc: 'Test your reflexes', color: '#ffd740', category: 'card_casual' },
+  { path: '/motocross', title: 'Motocross', desc: 'Physics 2D motorcycle platformer', color: '#ff7043', category: 'sports_racing' },
+  { path: '/gravityshooter', title: 'Gravity Shooter', desc: 'Up to 4P low-gravity arena', color: '#7c4dff', category: 'action_shooter' },
+  { path: '/supermario', title: 'Super Mario', desc: 'Classic platformer adventure', color: '#e53935', category: 'retro_arcade' },
+  { path: '/pool', title: '8-Ball Pool', desc: 'Billiards vs AI or 2P', color: '#1b5e20', category: 'sports_racing' },
+  { path: '/pacman', title: 'Pac-Man', desc: 'Eat dots, avoid ghosts', color: '#fdd835', category: 'retro_arcade' },
+  { path: '/fruitninja', title: 'Fruit Ninja', desc: 'Slice fruit, dodge bombs', color: '#e91e63', category: 'card_casual' },
+  { path: '/bomberman', title: 'Bomberman', desc: 'Bomb your way through', color: '#ff6f00', category: 'action_shooter' },
+  { path: '/geometrydash', title: 'Geometry Dash', desc: 'Rhythm platform runner', color: '#00e5ff', category: 'retro_arcade' },
+  { path: '/candycrush', title: 'Candy Crush', desc: 'Match-3 puzzle game', color: '#ce93d8', category: 'board_puzzle' },
+  { path: '/agario', title: 'Agar.io', desc: 'Eat cells, grow bigger', color: '#80deea', category: 'action_shooter' },
   { path: '/gravityguyrush', title: 'Gravity Guy Rush 2D', desc: 'Shared gravity runner', color: '#7dd3fc', category: 'sports_racing' },
   { path: '/pockettanks3d', title: 'Pocket Tanks 3D', desc: 'Turn-based tank battles', color: '#ffb74d', category: 'action_shooter' },
   { path: '/neontagarena', title: 'Neon Tag Arena', desc: 'Neon maze tag chase game', color: '#4dd0e1', category: 'action_shooter' },
@@ -217,7 +227,7 @@ export default function MainMenu() {
         <h1 className="menu-title">
           <span className="title-glow">NEON ARCADE</span>
         </h1>
-        <p className="menu-subtitle">Click a folder to view games • Drag canvas to slide</p>
+        <p className="menu-subtitle">Click a folder to view games - drag canvas to slide</p>
       </div>
 
       {/* Categories Horizontal Slider */}
@@ -335,3 +345,4 @@ export default function MainMenu() {
     </div>
   );
 }
+

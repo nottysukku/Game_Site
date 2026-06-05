@@ -86,7 +86,7 @@ export default function Pong() {
       if (ballX <= paddle.w + 10 && ballX > 6) {
         if (ballY >= p1Y && ballY <= p1Y + paddle.h) {
           ballX = paddle.w + 10;
-          bsx = Math.abs(bsx) + 0.4;
+          bsx = Math.min(Math.abs(bsx) + 0.4, 18);
           const hitPos = (ballY - p1Y - paddle.h / 2) / (paddle.h / 2);
           bsy = hitPos * 7;
           currentRally++;
@@ -98,7 +98,7 @@ export default function Pong() {
       if (ballX >= W - paddle.w - 10 && ballX < W - 6) {
         if (ballY >= p2Y && ballY <= p2Y + paddle.h) {
           ballX = W - paddle.w - 10;
-          bsx = -(Math.abs(bsx) + 0.4);
+          bsx = -Math.min(Math.abs(bsx) + 0.4, 18);
           const hitPos = (ballY - p2Y - paddle.h / 2) / (paddle.h / 2);
           bsy = hitPos * 7;
           currentRally++;
@@ -177,7 +177,7 @@ export default function Pong() {
     }
 
     const onKeyDown = e => { if (e.key in keys) { keys[e.key] = true; e.preventDefault(); } };
-    const onKeyUp = e => { if (e.key in keys) keys[e.key] = false; };
+    const onKeyUp = e => { if (e.key in keys) { keys[e.key] = false; e.preventDefault(); } };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 

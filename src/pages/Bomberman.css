@@ -1,0 +1,9 @@
+.bomber-root{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0a0e1a;color:#eee;font-family:'Segoe UI',sans-serif;overflow:hidden;position:relative}
+.bomber-root canvas{border:2px solid #ff6e4044;border-radius:4px}
+.bomber-hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:24px;font-size:.95rem;z-index:2;color:#fff;font-weight:700;background:rgba(10,14,26,.85);padding:6px 18px;border-radius:10px;border:1px solid #ff6e4033}
+.bomber-hud span{color:#ff6e40}
+.bomber-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:5;gap:14px}
+.bomber-overlay h2{font-size:2.8rem;color:#ff6e40;margin:0;text-shadow:0 0 20px #ff6e4055}
+.bomber-overlay p{color:#aaa;font-size:1.1rem;margin:0}
+.bomber-overlay button{padding:14px 44px;font-size:1.1rem;background:#ff6e40;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer}
+.bomber-overlay button:hover{background:#ff8a65}

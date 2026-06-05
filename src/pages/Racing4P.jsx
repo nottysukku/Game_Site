@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import BackButton from './BackButton';
 import './Racing4P.css';
 
@@ -47,6 +47,97 @@ function getDistanceToTrack(p) {
   return minDist;
 }
 
+// ========== COLLISION AUDIO via Web Audio API ==========
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
+function playCollisionSound(intensity = 1.0) {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+
+    // Impact noise burst
+    const bufferSize = ctx.sampleRate * 0.12;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = buffer;
+
+    // Filter to make it thuddy
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800 * intensity, now);
+    filter.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.35 * intensity, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+    noiseSource.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start(now);
+    noiseSource.stop(now + 0.15);
+
+    // Metallic ping
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600 + Math.random() * 400, now);
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.2 * intensity, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+  } catch (e) {
+    // Audio context may not be available
+  }
+}
+
+// ========== SPARK PARTICLE SYSTEM ==========
+class Particle {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 4;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.life = 1.0;
+    this.decay = 0.03 + Math.random() * 0.04;
+    this.size = 2 + Math.random() * 3;
+    this.color = color;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= 0.96;
+    this.vy *= 0.96;
+    this.life -= this.decay;
+  }
+  draw(ctx) {
+    if (this.life <= 0) return;
+    ctx.globalAlpha = this.life;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
 export default function Racing4P() {
   const canvasRef = useRef(null);
   const [playerCount, setPlayerCount] = useState(2);
@@ -55,6 +146,7 @@ export default function Racing4P() {
   const [phase, setPhase] = useState('menu'); // menu | countdown | playing | over
   const [leaderboard, setLeaderboard] = useState([]);
   const [victoryText, setVictoryText] = useState("");
+  const [finalStandings, setFinalStandings] = useState([]);
   const stateRef = useRef({ start: null, cleanup: null });
 
   useEffect(() => {
@@ -77,6 +169,18 @@ export default function Racing4P() {
       { x: 220, y: 400, size: 14, type: 'CONE' }
     ];
 
+    // Collision visual effects state
+    let screenShake = { x: 0, y: 0, intensity: 0 };
+    let collisionFlash = 0; // alpha for white flash overlay
+    let particles = [];
+
+    function spawnSparks(x, y, count, color1, color2) {
+      const sparkColors = [color1, color2, '#fff', '#ffaa00', '#ff6600'];
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle(x, y, sparkColors[Math.floor(Math.random() * sparkColors.length)]));
+      }
+    }
+
     class Car {
       constructor(idx, x, y, angle, isCPU = false, totalLaps = 3, colors = null) {
         this.idx = idx;
@@ -84,11 +188,14 @@ export default function Racing4P() {
         this.y = y;
         this.angle = angle;
         this.speed = 0;
+        this.vx = 0; // velocity components for collision physics
+        this.vy = 0;
         this.maxSpeed = isCPU ? 3.8 + Math.random() * 0.4 : 5.2;
         this.acceleration = 0.08;
         this.friction = 0.96;
         this.turnSpeed = 0.055;
-        this.radius = 12;
+        this.radius = 14;
+        this.mass = 1.0;
         this.isCPU = isCPU;
         this.color = colors ? colors[idx] : DEFAULT_PLAYER_COLORS[idx];
         this.label = PLAYER_LABELS[idx];
@@ -101,6 +208,11 @@ export default function Racing4P() {
 
         // AI specific
         this.targetWaypoint = 0;
+
+        // Collision feedback
+        this.collisionCooldown = 0; // frames until next collision allowed
+        this.flashTimer = 0; // frames of flash effect on this car
+        this.hitIntensity = 0; // for drawing hit ring
       }
 
       update(countdownActive) {
@@ -178,8 +290,10 @@ export default function Racing4P() {
         }
 
         // Apply Vector movement
-        this.x += Math.cos(this.angle) * this.speed;
-        this.y += Math.sin(this.angle) * this.speed;
+        this.vx = Math.cos(this.angle) * this.speed;
+        this.vy = Math.sin(this.angle) * this.speed;
+        this.x += this.vx;
+        this.y += this.vy;
 
         // Obstacle Collisions (only cones now — oil is handled via speedLimit above)
         obstacles.forEach(obs => {
@@ -190,6 +304,11 @@ export default function Racing4P() {
             // OIL is handled above via speedLimit, no spinout
           }
         });
+
+        // Decrement collision cooldown
+        if (this.collisionCooldown > 0) this.collisionCooldown--;
+        if (this.flashTimer > 0) this.flashTimer--;
+        if (this.hitIntensity > 0) this.hitIntensity *= 0.9;
 
         // Dynamic Lap Waypoint checks
         const nextWaypointIdx = (this.currentWaypoint + 1) % WAYPOINTS.length;
@@ -214,8 +333,13 @@ export default function Racing4P() {
         ctx.fillStyle = 'rgba(0,0,0,0.25)';
         ctx.fillRect(-12, -7, 24, 14);
 
-        // Car Body
-        ctx.fillStyle = this.color;
+        // Car Body - flash white on collision
+        if (this.flashTimer > 0) {
+          const flashAlpha = this.flashTimer / 10;
+          ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
+        } else {
+          ctx.fillStyle = this.color;
+        }
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1.8;
 
@@ -223,6 +347,16 @@ export default function Racing4P() {
         ctx.roundRect(-14, -8, 28, 16, 4);
         ctx.fill();
         ctx.stroke();
+
+        // Re-draw body color on top when flashing (tinted)
+        if (this.flashTimer > 0) {
+          ctx.fillStyle = this.color;
+          ctx.globalAlpha = 0.5;
+          ctx.beginPath();
+          ctx.roundRect(-14, -8, 28, 16, 4);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
 
         // Windshield cabin
         ctx.fillStyle = '#111';
@@ -234,8 +368,21 @@ export default function Racing4P() {
         ctx.fillStyle = '#fff';
         ctx.fillRect(-14, -8, 3, 16);
 
-        // Label Tag
         ctx.restore();
+
+        // Collision impact ring effect
+        if (this.hitIntensity > 0.05) {
+          ctx.save();
+          ctx.strokeStyle = `rgba(255, 200, 50, ${this.hitIntensity})`;
+          ctx.lineWidth = 2 * this.hitIntensity;
+          ctx.beginPath();
+          const ringRadius = this.radius + 8 * (1 - this.hitIntensity);
+          ctx.arc(this.x, this.y, ringRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Label Tag
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 9px monospace';
         ctx.textAlign = 'center';
@@ -454,20 +601,156 @@ export default function Racing4P() {
       ctx.restore();
     }
 
+    // ========== CAR-TO-CAR COLLISION DETECTION & RESOLUTION ==========
+    function resolveCarCollisions() {
+      for (let i = 0; i < cars.length; i++) {
+        for (let j = i + 1; j < cars.length; j++) {
+          const a = cars[i];
+          const b = cars[j];
+
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy);
+          const minDist = a.radius + b.radius;
+
+          if (dist < minDist && dist > 0.01) {
+            // Both must not be on cooldown
+            if (a.collisionCooldown > 0 && b.collisionCooldown > 0) continue;
+
+            // Normalize collision axis
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            // Separate cars (push apart equally)
+            const overlap = minDist - dist;
+            a.x -= nx * overlap * 0.5;
+            a.y -= ny * overlap * 0.5;
+            b.x += nx * overlap * 0.5;
+            b.y += ny * overlap * 0.5;
+
+            // Relative velocity along collision normal
+            const dvx = a.vx - b.vx;
+            const dvy = a.vy - b.vy;
+            const relVelNormal = dvx * nx + dvy * ny;
+
+            // Only resolve if cars are moving towards each other
+            if (relVelNormal > 0) continue;
+
+            // Elastic collision impulse (equal mass)
+            const restitution = 0.7; // bounciness
+            const impulse = -(1 + restitution) * relVelNormal / (1 / a.mass + 1 / b.mass);
+
+            // Apply impulse to velocities
+            a.vx += (impulse / a.mass) * nx;
+            a.vy += (impulse / a.mass) * ny;
+            b.vx -= (impulse / b.mass) * nx;
+            b.vy -= (impulse / b.mass) * ny;
+
+            // Update speed from new velocity (project back onto heading)
+            a.speed = Math.hypot(a.vx, a.vy) * Math.sign(Math.cos(a.angle) * a.vx + Math.sin(a.angle) * a.vy);
+            b.speed = Math.hypot(b.vx, b.vy) * Math.sign(Math.cos(b.angle) * b.vx + Math.sin(b.angle) * b.vy);
+
+            // Slightly adjust angle towards bounce direction
+            a.angle = Math.atan2(
+              Math.sin(a.angle) * 0.6 + a.vy * 0.4 / (Math.abs(a.speed) + 0.1),
+              Math.cos(a.angle) * 0.6 + a.vx * 0.4 / (Math.abs(a.speed) + 0.1)
+            );
+            b.angle = Math.atan2(
+              Math.sin(b.angle) * 0.6 + b.vy * 0.4 / (Math.abs(b.speed) + 0.1),
+              Math.cos(b.angle) * 0.6 + b.vx * 0.4 / (Math.abs(b.speed) + 0.1)
+            );
+
+            // === SPEED PENALTY on collision ===
+            const impactSpeed = Math.abs(relVelNormal);
+            const penalty = Math.max(0.4, 1 - impactSpeed * 0.15);
+            a.speed *= penalty;
+            b.speed *= penalty;
+
+            // Collision cooldown (prevent repeated hits from overlap)
+            a.collisionCooldown = 8;
+            b.collisionCooldown = 8;
+
+            // === VISUAL FEEDBACK ===
+            // Car flash
+            a.flashTimer = 10;
+            b.flashTimer = 10;
+            a.hitIntensity = 1.0;
+            b.hitIntensity = 1.0;
+
+            // Screen shake proportional to impact
+            const shakeAmount = Math.min(8, impactSpeed * 3);
+            screenShake.intensity = shakeAmount;
+
+            // Collision flash overlay
+            collisionFlash = Math.min(0.3, impactSpeed * 0.08);
+
+            // Spawn sparks at collision point
+            const cx = (a.x + b.x) / 2;
+            const cy = (a.y + b.y) / 2;
+            const sparkCount = Math.floor(6 + impactSpeed * 3);
+            spawnSparks(cx, cy, sparkCount, a.color, b.color);
+
+            // Play collision sound
+            const soundIntensity = Math.min(1.0, impactSpeed * 0.4);
+            playCollisionSound(soundIntensity);
+          }
+        }
+      }
+    }
+
     function gameLoop(currentLaps) {
+      // Screen shake offset
+      if (screenShake.intensity > 0.1) {
+        screenShake.x = (Math.random() - 0.5) * screenShake.intensity * 2;
+        screenShake.y = (Math.random() - 0.5) * screenShake.intensity * 2;
+        screenShake.intensity *= 0.85; // decay
+      } else {
+        screenShake.x = 0;
+        screenShake.y = 0;
+        screenShake.intensity = 0;
+      }
+
+      ctx.save();
+      ctx.translate(screenShake.x, screenShake.y);
+
       // 1. Draw track
       drawTrack(ctx);
       drawObstacles(ctx);
 
       const countdownActive = countdownPhase > 0;
 
-      // 2. Update and draw cars
+      // 2. Update cars
       let finishedCount = 0;
       cars.forEach(car => {
         car.update(countdownActive);
-        car.draw(ctx);
         if (car.finished) finishedCount++;
       });
+
+      // 2.5 Car-to-car collision detection & resolution (only during play)
+      if (!countdownActive) {
+        resolveCarCollisions();
+      }
+
+      // 2.6 Draw cars
+      cars.forEach(car => {
+        car.draw(ctx);
+      });
+
+      // 2.7 Update & draw particles
+      particles = particles.filter(p => p.life > 0);
+      particles.forEach(p => {
+        p.update();
+        p.draw(ctx);
+      });
+
+      ctx.restore(); // end screen shake transform
+
+      // Collision flash overlay
+      if (collisionFlash > 0.01) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${collisionFlash})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        collisionFlash *= 0.85;
+      }
 
       // Handle countdown progression
       if (countdownPhase > 0) {
@@ -517,6 +800,7 @@ export default function Racing4P() {
       if (finishedCount > 0) {
         const winner = standings[0];
         setVictoryText(`${winner.label.toUpperCase()} WINS THE GRAND PRIX!`);
+        setFinalStandings(standings.map((c, i) => `${i + 1}. ${c.label.split(' ')[0]} — Lap ${Math.min(currentLaps, c.lap)}/${currentLaps}`));
         setPhase('over');
         cancelAnimationFrame(animationId);
         return;
@@ -527,8 +811,14 @@ export default function Racing4P() {
 
     stateRef.current.start = (count, laps, colors) => {
       setVictoryText("");
+      setFinalStandings([]);
       setupMatch(count, laps, colors);
       setPhase('countdown');
+
+      // Reset collision effects
+      screenShake = { x: 0, y: 0, intensity: 0 };
+      collisionFlash = 0;
+      particles = [];
 
       // Start countdown
       countdownPhase = 3;
@@ -670,6 +960,14 @@ export default function Racing4P() {
             <div className="r4-gameover-result">
               {victoryText}
             </div>
+            {finalStandings.length > 0 && (
+              <div className="r4-final-standings">
+                <div className="r4-standings-title">// FINAL STANDINGS</div>
+                {finalStandings.map((s, i) => (
+                  <div key={i} className={`r4-final-row${i === 0 ? ' winner' : ''}`}>{s}</div>
+                ))}
+              </div>
+            )}
             <button className="r4-restart-btn" onClick={handleStart}>
               RE-ENGAGE RACERS
             </button>

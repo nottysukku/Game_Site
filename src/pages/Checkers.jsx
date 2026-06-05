@@ -69,7 +69,7 @@ function evaluate(board){
 
 function minimax(board,depth,alpha,beta,maximising){
   if(depth===0){return{score:evaluate(board),move:null};}
-  const moves=getAllMoves(board,!maximising); // black=min
+  const moves=getAllMoves(board,maximising); // maximising=white(human), minimising=black(AI)
   if(moves.length===0) return{score:maximising?-100:100,move:null};
   let best=null;
   if(maximising){
@@ -147,7 +147,12 @@ export default function Checkers(){
           }
         }
         setBoard(nb);setSelected(null);setLegalMoves([]);
-        if(!checkWin(nb)){setTurn('b');setTimeout(()=>aiMove(nb),300);}
+        if(!checkWin(nb)){
+          // Check if AI has any moves - if not, player wins
+          const aiMoves=getAllMoves(nb,false);
+          if(aiMoves.length===0){setStatus('You win!');return;}
+          setTurn('b');setTimeout(()=>aiMove(nb),300);
+        }
         return;
       }
     }

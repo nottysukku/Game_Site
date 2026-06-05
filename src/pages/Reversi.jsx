@@ -72,10 +72,40 @@ export default function Reversi() {
   const [gameOver, setGameOver] = useState(false);
   const [lastFlipped, setLastFlipped] = useState([]);
 
-  const playMove = useCallback((r, c, player) => {
-    const flips = getFlips(board,r,c,player);
+  const doAiTurn = useCallback((currentBoard) => {
+    const move = aiMove(currentBoard);
+    if (!move) {
+      // AI can't move, check if black can
+      if (getValidMoves(currentBoard, BLACK).length > 0) {
+        setTurn(BLACK);
+      } else {
+        setGameOver(true);
+      }
+      return;
+    }
+    const flips2 = getFlips(currentBoard, move[0], move[1], WHITE);
+    const nb2 = currentBoard.map(row=>[...row]);
+    nb2[move[0]][move[1]] = WHITE;
+    for (const [fr,fc] of flips2) nb2[fr][fc] = WHITE;
+    setBoard(nb2);
+    setLastFlipped(flips2.map(([fr,fc])=>fr*SIZE+fc));
+    const bm = getValidMoves(nb2, BLACK);
+    if (bm.length > 0) {
+      setTurn(BLACK);
+    } else if (getValidMoves(nb2, WHITE).length > 0) {
+      // WHITE goes again
+      setTurn(WHITE);
+      setTimeout(() => doAiTurn(nb2), 400);
+    } else {
+      setGameOver(true);
+    }
+  }, []);
+
+  const playMove = useCallback((r, c, player, currentBoard) => {
+    const brd = currentBoard || board;
+    const flips = getFlips(brd,r,c,player);
     if (!flips.length) return false;
-    const nb = board.map(row=>[...row]);
+    const nb = brd.map(row=>[...row]);
     nb[r][c] = player;
     for (const [fr,fc] of flips) nb[fr][fc] = player;
     setBoard(nb);
@@ -88,32 +118,19 @@ export default function Reversi() {
       setTurn(next);
       // AI plays after human
       if (next === WHITE) {
-        setTimeout(() => {
-          const move = aiMove(nb);
-          if (move) {
-            const flips2 = getFlips(nb, move[0], move[1], WHITE);
-            const nb2 = nb.map(row=>[...row]);
-            nb2[move[0]][move[1]] = WHITE;
-            for (const [fr,fc] of flips2) nb2[fr][fc] = WHITE;
-            setBoard(nb2);
-            setLastFlipped(flips2.map(([fr,fc])=>fr*SIZE+fc));
-            const bm = getValidMoves(nb2, BLACK);
-            if (bm.length > 0) setTurn(BLACK);
-            else if (getValidMoves(nb2, WHITE).length > 0) {
-              // WHITE goes again, recurse
-              setTurn(WHITE);
-            } else setGameOver(true);
-          }
-        }, 400);
+        setTimeout(() => doAiTurn(nb), 400);
       }
     } else if (currentMoves.length > 0) {
-      // Next player has no moves, current keeps turn (but we just played, check if AI)
+      // Next player has no moves, current keeps turn
       setTurn(player);
+      if (player === WHITE) {
+        setTimeout(() => doAiTurn(nb), 400);
+      }
     } else {
       setGameOver(true);
     }
     return true;
-  }, [board]);
+  }, [board, doAiTurn]);
 
   const handleClick = (r, c) => {
     if (gameOver || turn !== BLACK) return;

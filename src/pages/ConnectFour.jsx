@@ -222,7 +222,7 @@ export default function ConnectFour() {
     setStatus("AI thinking…");
     setThinking(true);
     setTimeout(() => {
-      const { col: aiCol } = minimax(res.board, 2, -Infinity, Infinity, true);
+      const { col: aiCol } = minimax(res.board, 5, -Infinity, Infinity, true);
       const aiRes = drop(res.board, aiCol, P2);
       if (!aiRes) {
         setThinking(false);

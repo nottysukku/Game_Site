@@ -51,7 +51,10 @@ export default function SpaceInvaders() {
     stateRef.current = initState(1);
     setScore(0); setLives(3); setWave(1); setGameOver(false);
 
-    const keyDown = (e) => { stateRef.current.keys[e.key] = true; };
+    const keyDown = (e) => {
+      if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+      stateRef.current.keys[e.key] = true;
+    };
     const keyUp = (e) => { stateRef.current.keys[e.key] = false; };
     window.addEventListener('keydown', keyDown);
     window.addEventListener('keyup', keyUp);
@@ -182,8 +185,10 @@ export default function SpaceInvaders() {
   }, [initState]);
 
   const restart = () => {
+    const oldKeys = stateRef.current?.keys || {};
     stateRef.current = initState(1);
     stateRef.current.score = 0; stateRef.current.lives = 3;
+    stateRef.current.keys = oldKeys;
     setScore(0); setLives(3); setWave(1); setGameOver(false);
   };
 

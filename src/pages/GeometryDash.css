@@ -1,0 +1,11 @@
+.gdash-root{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0a0e1a;color:#eee;font-family:'Segoe UI',sans-serif;overflow:hidden;position:relative}
+.gdash-root canvas{border:2px solid #00e5ff22;border-radius:4px}
+.gdash-hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:24px;font-size:1rem;z-index:2;color:#fff;font-weight:700;background:rgba(10,14,26,.85);padding:6px 18px;border-radius:10px;border:1px solid #00e5ff22}
+.gdash-hud span{color:#00e5ff}
+.gdash-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:5;gap:14px}
+.gdash-overlay h2{font-size:3rem;color:#00e5ff;margin:0;text-shadow:0 0 20px #00e5ff55}
+.gdash-overlay p{color:#aaa;font-size:1.1rem;margin:0}
+.gdash-overlay button{padding:14px 44px;font-size:1.1rem;background:#00e5ff;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer}
+.gdash-overlay button:hover{background:#40efff}
+.gdash-progress{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:300px;height:6px;background:#111;border-radius:3px;z-index:2}
+.gdash-progress-fill{height:100%;background:#00e5ff;border-radius:3px;transition:width .1s}

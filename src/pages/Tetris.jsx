@@ -173,8 +173,9 @@ export default function Tetris() {
 
   useEffect(() => {
     spawn();
-    const loop = () => { draw(); requestAnimationFrame(loop); };
-    const af = requestAnimationFrame(loop);
+    let af;
+    const loop = () => { draw(); af = requestAnimationFrame(loop); };
+    af = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(af);
   },[spawn,draw]);
 
@@ -186,6 +187,7 @@ export default function Tetris() {
 
   useEffect(() => {
     const handler = (e) => {
+      if (['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(e.key)) e.preventDefault();
       if (e.key==='ArrowLeft') move(-1);
       else if (e.key==='ArrowRight') move(1);
       else if (e.key==='ArrowDown') tick();

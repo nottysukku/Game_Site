@@ -4,7 +4,7 @@ import BackButton from './BackButton';
 import './Multiplayer3D.css';
 
 const PLAYER_LABELS = ['P1', 'P2', 'P3', 'P4'];
-const TANK_COLORS = [0x22d3ee, 0x60a5fa, 0xfb7185, 0xfacc15];
+const TANK_COLORS = [0x22d3ee, 0xfb7185, 0x60a5fa, 0xfacc15];
 
 const ROCKET_TYPES = [
   {
@@ -48,6 +48,7 @@ function createTank(color) {
     new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.25 })
   );
   base.castShadow = true;
+  base.receiveShadow = true;
 
   const turret = new THREE.Mesh(
     new THREE.CylinderGeometry(0.7, 0.7, 0.5, 14),
@@ -55,6 +56,7 @@ function createTank(color) {
   );
   turret.rotation.z = Math.PI / 2;
   turret.position.set(0, 0.85, 0);
+  turret.castShadow = true;
 
   const barrelPivot = new THREE.Group();
   barrelPivot.position.set(0.65, 0.95, 0);
@@ -63,6 +65,7 @@ function createTank(color) {
     new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.4, metalness: 0.55 })
   );
   barrel.position.x = 1.05;
+  barrel.castShadow = true;
   barrelPivot.add(barrel);
 
   group.add(base, turret, barrelPivot);
@@ -76,6 +79,91 @@ function createExplosionMesh(radius, color) {
   );
 }
 
+/* ---------- AI logic ---------- */
+function computeAIMove(aiTank, targetTank, terrainHeightAt, rules) {
+  const dx = targetTank.x - aiTank.x;
+  const targetY = terrainHeightAt(targetTank.x) + 1.2;
+  const originY = terrainHeightAt(aiTank.x) + 1.2;
+  const dy = targetY - originY;
+  const absDx = Math.abs(dx);
+  const gravity = rules.gravity;
+
+  // Try to find a good angle/power combo using projectile motion equations
+  // We'll iterate a few candidate angles and pick the best power
+  let bestAngle = 45;
+  let bestPower = 30;
+  let bestError = Infinity;
+
+  for (let angleDeg = 20; angleDeg <= 80; angleDeg += 2) {
+    const angleRad = (angleDeg * Math.PI) / 180;
+    // Adjust angle direction based on target position
+    const fireAngle = dx > 0 ? angleRad : Math.PI - angleRad;
+    const cosA = Math.cos(fireAngle);
+    const sinA = Math.sin(fireAngle);
+
+    if (Math.abs(cosA) < 0.01) continue;
+
+    // projectile: x = v*cosA*t, y = v*sinA*t - 0.5*g*t^2
+    // At impact x = dx: t = dx / (v * cosA)
+    // dy = v*sinA*t - 0.5*g*t^2
+    // dy = sinA/cosA * dx - 0.5*g*(dx/(v*cosA))^2
+    // Solve for v:
+    // 0.5*g*dx^2/(v^2*cos^2A) = sinA/cosA * dx - dy
+    // v^2 = 0.5*g*dx^2 / (cos^2A * (tanA * dx - dy))
+
+    const tanA = sinA / cosA;
+    const denom = tanA * dx - dy;
+    if (denom <= 0.5) continue; // no valid solution
+
+    const vSquared = (0.5 * gravity * dx * dx) / (cosA * cosA * denom);
+    if (vSquared <= 0) continue;
+
+    const v = Math.sqrt(vSquared);
+    // Convert velocity to power: speed = type.speed * (power/30), we use standard rocket
+    const rocketSpeed = ROCKET_TYPES[0].speed;
+    const power = (v / rocketSpeed) * 30;
+
+    if (power < 12 || power > 44) continue;
+
+    // Simulate to check actual landing
+    const simDt = 0.02;
+    let sx = 0, sy = 0;
+    let svx = v * cosA, svy = v * sinA;
+    let landX = null;
+    for (let step = 0; step < 500; step++) {
+      svy -= gravity * simDt;
+      sx += svx * simDt;
+      sy += svy * simDt;
+      const worldX = aiTank.x + sx;
+      const worldY = originY + sy;
+      const groundY = terrainHeightAt(worldX) + 0.2;
+      if (worldY <= groundY || Math.abs(worldX) > rules.terrainWidth * 0.58) {
+        landX = worldX;
+        break;
+      }
+    }
+
+    if (landX !== null) {
+      const error = Math.abs(landX - targetTank.x);
+      if (error < bestError) {
+        bestError = error;
+        bestAngle = dx > 0 ? angleDeg : 180 - angleDeg;
+        bestPower = power;
+      }
+    }
+  }
+
+  // Add slight randomness for realism
+  const angleNoise = (Math.random() - 0.5) * 8; // ±4 degrees
+  const powerNoise = (Math.random() - 0.5) * 4; // ±2 power
+
+  return {
+    angle: clamp(bestAngle + angleNoise, 8, 172),
+    power: clamp(bestPower + powerNoise, 12, 44),
+    rocketIndex: Math.random() < 0.3 ? 1 : Math.random() < 0.4 ? 2 : 0,
+  };
+}
+
 export default function PocketTanks3D() {
   const mountRef = useRef(null);
   const engineRef = useRef(null);
@@ -83,14 +171,15 @@ export default function PocketTanks3D() {
   const pressLatchRef = useRef({});
 
   const [phase, setPhase] = useState('menu');
-  const [playerCount, setPlayerCount] = useState(4);
+  const [gameMode, setGameMode] = useState(null); // '1p' or '2p' or 'multi'
+  const [playerCount, setPlayerCount] = useState(2);
   const [currentPlayer, setCurrentPlayer] = useState(0);
   const [turnClock, setTurnClock] = useState(20);
   const [rocketName, setRocketName] = useState(ROCKET_TYPES[0].name);
   const [angle, setAngle] = useState(45);
   const [power, setPower] = useState(30);
   const [health, setHealth] = useState([100, 100, 100, 100]);
-  const [status, setStatus] = useState('Turn-based artillery for 3-4 tanks.');
+  const [status, setStatus] = useState('Turn-based artillery battle.');
 
   const rules = useMemo(
     () => ({
@@ -152,33 +241,79 @@ export default function PocketTanks3D() {
     return { segments, heights };
   }
 
-  function buildEngine(count) {
+  function createSkyGradient() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, '#1a3a5c');     // deep blue sky top
+    gradient.addColorStop(0.3, '#3a7bd5');   // medium blue
+    gradient.addColorStop(0.6, '#6bb7e0');   // light blue
+    gradient.addColorStop(0.85, '#b5d8f0');  // pale horizon
+    gradient.addColorStop(1, '#e8dcc8');     // warm ground horizon
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 2, 512);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    return texture;
+  }
+
+  function buildEngine(count, mode) {
     if (!mountRef.current) return null;
     if (engineRef.current?.dispose) {
       engineRef.current.dispose();
     }
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x070d1a);
-    scene.fog = new THREE.FogExp2(0x0a1425, 0.02);
 
-    const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 320);
-    camera.position.set(0, 56, 82);
-    camera.lookAt(0, 8, 0);
+    // Sky gradient background
+    const skyTexture = createSkyGradient();
+    scene.background = skyTexture;
+    scene.fog = new THREE.FogExp2(0x8ab4d6, 0.008);
+
+    // Camera: elevated isometric angle for clear view of terrain and both tanks
+    const w = mountRef.current.clientWidth || window.innerWidth;
+    const h = mountRef.current.clientHeight || window.innerHeight;
+    const camera = new THREE.PerspectiveCamera(50, w / Math.max(1, h), 0.1, 400);
+    camera.position.set(0, 38, 65);
+    camera.lookAt(0, 6, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
     mountRef.current.innerHTML = '';
     mountRef.current.appendChild(renderer.domElement);
 
-    const amb = new THREE.AmbientLight(0xffffff, 0.42);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.12);
-    sun.position.set(35, 60, 18);
+    // === LIGHTING OVERHAUL ===
+    // Bright ambient light for overall visibility
+    const amb = new THREE.AmbientLight(0xffffff, 0.6);
+
+    // Strong directional sunlight with shadows
+    const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
+    sun.position.set(30, 55, 25);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    scene.add(amb, sun);
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -60;
+    sun.shadow.camera.right = 60;
+    sun.shadow.camera.top = 40;
+    sun.shadow.camera.bottom = -10;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 120;
+    sun.shadow.bias = -0.001;
+
+    // Hemisphere light for natural sky/ground lighting
+    const hemi = new THREE.HemisphereLight(0x87ceeb, 0x556b2f, 0.5);
+
+    // Fill light from the opposite side to reduce harsh shadows
+    const fill = new THREE.DirectionalLight(0xb0d4f1, 0.3);
+    fill.position.set(-25, 30, -15);
+
+    scene.add(amb, sun, hemi, fill);
 
     const terrainData = makeTerrainData();
     const terrainGeo = new THREE.PlaneGeometry(
@@ -214,20 +349,37 @@ export default function PocketTanks3D() {
 
     applyHeightsToGeometry();
 
+    // Bright, visible terrain material - earthy green/brown
     const terrain = new THREE.Mesh(
       terrainGeo,
-      new THREE.MeshStandardMaterial({ color: 0x25537a, roughness: 0.88, metalness: 0.08 })
+      new THREE.MeshStandardMaterial({
+        color: 0x5a8a3c,
+        roughness: 0.85,
+        metalness: 0.05,
+      })
     );
     terrain.receiveShadow = true;
+    terrain.castShadow = false;
     scene.add(terrain);
 
+    // Bedrock/ground base - visible brown earth
     const bedrock = new THREE.Mesh(
       new THREE.BoxGeometry(rules.terrainWidth + 4, 8, rules.terrainDepth + 3),
-      new THREE.MeshStandardMaterial({ color: 0x182539, roughness: 0.9 })
+      new THREE.MeshStandardMaterial({ color: 0x6b4e2e, roughness: 0.9 })
     );
     bedrock.position.set(0, 2.8, 0);
     bedrock.receiveShadow = true;
     scene.add(bedrock);
+
+    // Ground plane extending to horizon
+    const groundPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(400, 400),
+      new THREE.MeshStandardMaterial({ color: 0x4a7a2e, roughness: 1.0 })
+    );
+    groundPlane.rotation.x = -Math.PI / 2;
+    groundPlane.position.y = 0.5;
+    groundPlane.receiveShadow = true;
+    scene.add(groundPlane);
 
     const tanks = [];
     for (let i = 0; i < count; i += 1) {
@@ -261,6 +413,7 @@ export default function PocketTanks3D() {
       applyHeightsToGeometry,
       tanks,
       count,
+      mode, // '1p', '2p', or 'multi'
       currentTurn: 0,
       turnClock: rules.roundTurnSeconds,
       projectile: null,
@@ -270,6 +423,9 @@ export default function PocketTanks3D() {
       over: false,
       lastTime: 0,
       uiTick: 0,
+      aiPending: false,
+      aiTimer: 0,
+      aiHasFired: false,
       dispose: () => {
         engine.active = false;
         cancelAnimationFrame(engine.anim);
@@ -283,11 +439,11 @@ export default function PocketTanks3D() {
 
     engine.onResize = () => {
       if (!mountRef.current) return;
-      const w = mountRef.current.clientWidth;
-      const h = mountRef.current.clientHeight;
-      camera.aspect = w / Math.max(1, h);
+      const rw = mountRef.current.clientWidth || window.innerWidth;
+      const rh = mountRef.current.clientHeight || window.innerHeight;
+      camera.aspect = rw / Math.max(1, rh);
       camera.updateProjectionMatrix();
-      renderer.setSize(w, h, false);
+      renderer.setSize(rw, rh, false);
     };
     window.addEventListener('resize', engine.onResize);
     engine.onResize();
@@ -316,7 +472,11 @@ export default function PocketTanks3D() {
       if (winner === null) {
         setStatus('Draw: all tanks destroyed.');
       } else {
-        setStatus(`${PLAYER_LABELS[winner]} wins the battle.`);
+        if (engine.mode === '1p') {
+          setStatus(winner === 0 ? 'You win the battle!' : 'CPU wins the battle.');
+        } else {
+          setStatus(`${PLAYER_LABELS[winner]} wins the battle.`);
+        }
       }
       setPhase('over');
       return;
@@ -333,7 +493,19 @@ export default function PocketTanks3D() {
         setAngle(Math.round(tank.angle));
         setPower(Math.round(tank.power));
         setRocketName(ROCKET_TYPES[tank.rocketIndex].name);
-        setStatus(`${PLAYER_LABELS[next]} turn. Move, aim, and fire.`);
+
+        // Check if this is an AI turn
+        const isAI = engine.mode === '1p' && next !== 0;
+        if (isAI) {
+          engine.aiPending = true;
+          engine.aiTimer = 0;
+          engine.aiHasFired = false;
+          setStatus('CPU is aiming...');
+        } else {
+          engine.aiPending = false;
+          const label = engine.mode === '1p' ? 'Your' : `${PLAYER_LABELS[next]}`;
+          setStatus(`${label} turn. Move, aim, and fire.`);
+        }
         return;
       }
     }
@@ -413,7 +585,9 @@ export default function PocketTanks3D() {
       splitChild: false,
     });
 
-    setStatus(`${PLAYER_LABELS[tank.index]} fired ${type.name}.`);
+    const label = engine.mode === '1p' && tank.index === 0 ? 'You' :
+                  engine.mode === '1p' ? 'CPU' : PLAYER_LABELS[tank.index];
+    setStatus(`${label} fired ${type.name}.`);
   }
 
   function processImpact(engine, projectile) {
@@ -493,10 +667,52 @@ export default function PocketTanks3D() {
     }
   }
 
+  function handleAITurn(engine, dt) {
+    const tank = engine.tanks[engine.currentTurn];
+    if (!tank || !tank.alive) {
+      nextLivingTurn(engine);
+      return;
+    }
+
+    engine.aiTimer += dt;
+
+    // AI thinks for ~1.2 seconds then fires
+    if (!engine.aiHasFired && engine.aiTimer >= 0.4) {
+      // Find a living opponent (target the player primarily)
+      const living = engine.tanks.filter(t => t.alive && t.index !== tank.index);
+      if (living.length === 0) return;
+      // Prefer targeting the human player (index 0), else pick random
+      const target = living.find(t => t.index === 0) || living[Math.floor(Math.random() * living.length)];
+
+      const move = computeAIMove(tank, target, engine.terrainHeightAt, rules);
+      tank.angle = move.angle;
+      tank.power = move.power;
+      tank.rocketIndex = move.rocketIndex;
+      syncTankMesh(tank, engine.terrainHeightAt);
+
+      // Update UI to show AI's chosen values
+      setAngle(Math.round(tank.angle));
+      setPower(Math.round(tank.power));
+      setRocketName(ROCKET_TYPES[tank.rocketIndex].name);
+    }
+
+    if (!engine.aiHasFired && engine.aiTimer >= 1.2) {
+      engine.aiHasFired = true;
+      engine.aiPending = false;
+      fireProjectile(engine, tank);
+    }
+  }
+
   function handleTurnControls(engine, dt) {
     const tank = engine.tanks[engine.currentTurn];
     if (!tank || !tank.alive) {
       nextLivingTurn(engine);
+      return;
+    }
+
+    // If it's an AI turn, delegate to AI handler
+    if (engine.aiPending) {
+      handleAITurn(engine, dt);
       return;
     }
 
@@ -543,10 +759,14 @@ export default function PocketTanks3D() {
 
     if (!engine.over) {
       if (!hasProjectile) {
-        engine.turnClock -= dt;
+        if (!engine.aiPending) {
+          engine.turnClock -= dt;
+        }
         handleTurnControls(engine, dt);
-        if (engine.turnClock <= 0) {
-          setStatus(`${PLAYER_LABELS[engine.currentTurn]} timed out.`);
+        if (!engine.aiPending && engine.turnClock <= 0) {
+          const label = engine.mode === '1p' && engine.currentTurn === 0 ? 'You' :
+                        engine.mode === '1p' ? 'CPU' : PLAYER_LABELS[engine.currentTurn];
+          setStatus(`${label} timed out.`);
           nextLivingTurn(engine);
         }
       }
@@ -576,8 +796,10 @@ export default function PocketTanks3D() {
     engine.anim = requestAnimationFrame(animate);
   }
 
-  function startGame() {
-    const engine = buildEngine(playerCount);
+  function startGame(mode, count) {
+    setGameMode(mode);
+    setPlayerCount(count);
+    const engine = buildEngine(count, mode);
     if (!engine) return;
     engine.currentTurn = 0;
     while (!engine.tanks[engine.currentTurn].alive) {
@@ -596,7 +818,12 @@ export default function PocketTanks3D() {
     setPower(activeTank.power);
     setRocketName(ROCKET_TYPES[activeTank.rocketIndex].name);
     setHealth(engine.tanks.map(tank => tank.health));
-    setStatus(`${PLAYER_LABELS[engine.currentTurn]} turn. Fire when ready.`);
+
+    if (mode === '1p') {
+      setStatus('Your turn. Move, aim, and fire.');
+    } else {
+      setStatus(`${PLAYER_LABELS[engine.currentTurn]} turn. Fire when ready.`);
+    }
 
     setPhase('playing');
     engine.anim = requestAnimationFrame(animate);
@@ -608,13 +835,21 @@ export default function PocketTanks3D() {
       engineRef.current = null;
     }
     setPhase('menu');
+    setGameMode(null);
     setCurrentPlayer(0);
     setTurnClock(rules.roundTurnSeconds);
     setAngle(45);
     setPower(30);
     setRocketName(ROCKET_TYPES[0].name);
     setHealth([100, 100, 100, 100]);
-    setStatus('Turn-based artillery for 3-4 tanks.');
+    setStatus('Turn-based artillery battle.');
+  }
+
+  function getPlayerLabel(index) {
+    if (gameMode === '1p') {
+      return index === 0 ? 'You' : 'CPU';
+    }
+    return PLAYER_LABELS[index];
   }
 
   return (
@@ -624,21 +859,32 @@ export default function PocketTanks3D() {
       {phase === 'menu' && (
         <div className="m3-overlay">
           <h1>Pocket Tanks 3D</h1>
-          <p>Turn-by-turn artillery for 3-4 players using one keyboard.</p>
-          <p>Move tanks, set angle and power, choose rocket type, and shoot trajectories.</p>
-          <div className="m3-player-count">
-            <span>Players:</span>
-            <button className={playerCount === 3 ? 'active' : ''} onClick={() => setPlayerCount(3)}>3</button>
-            <button className={playerCount === 4 ? 'active' : ''} onClick={() => setPlayerCount(4)}>4</button>
+          <p>Turn-by-turn artillery battle. Move tanks, aim, set power, and fire!</p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '18px' }}>
+            <button className="m3-main-btn" onClick={() => startGame('1p', 2)}>
+              🎮 1 Player vs CPU
+            </button>
+            <button className="m3-main-btn" onClick={() => startGame('2p', 2)}>
+              👥 2 Players Local
+            </button>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <button className="m3-alt-btn" onClick={() => startGame('multi', 3)}>
+                3 Players
+              </button>
+              <button className="m3-alt-btn" onClick={() => startGame('multi', 4)}>
+                4 Players
+              </button>
+            </div>
           </div>
-          <div className="m3-controls-list">
+
+          <div className="m3-controls-list" style={{ marginTop: '16px' }}>
             <span>A/D move tank</span>
             <span>J/L aim</span>
             <span>W/S power</span>
             <span>Q/E rocket type</span>
             <span>Space fire</span>
           </div>
-          <button className="m3-main-btn" onClick={startGame}>Start Artillery Match</button>
         </div>
       )}
 
@@ -646,7 +892,11 @@ export default function PocketTanks3D() {
         <>
           <div className="m3-top-right">
             <div className="m3-panel">
-              <h3>{PLAYER_LABELS[currentPlayer]} Turn</h3>
+              <h3>
+                {gameMode === '1p'
+                  ? (currentPlayer === 0 ? '🎮 Your Turn' : '🤖 CPU Turn')
+                  : `${PLAYER_LABELS[currentPlayer]} Turn`}
+              </h3>
               <p>Timer: {Math.ceil(turnClock)}</p>
               <p>Rocket: {rocketName}</p>
               <p>Angle: {Math.round(angle)}°</p>
@@ -657,7 +907,7 @@ export default function PocketTanks3D() {
               <div className="m3-health-grid">
                 {health.slice(0, playerCount).map((value, index) => (
                   <div key={PLAYER_LABELS[index]} className={`m3-health-item ${value <= 0 ? 'dead' : ''}`}>
-                    <span>{PLAYER_LABELS[index]}</span>
+                    <span>{getPlayerLabel(index)}</span>
                     <strong>{Math.max(0, Math.round(value))}</strong>
                   </div>
                 ))}
@@ -676,7 +926,7 @@ export default function PocketTanks3D() {
         <div className="m3-overlay">
           <h2>Battle Over</h2>
           <p>{status}</p>
-          <button className="m3-main-btn" onClick={startGame}>Rematch</button>
+          <button className="m3-main-btn" onClick={() => startGame(gameMode, playerCount)}>Rematch</button>
           <button className="m3-alt-btn" onClick={backToMenu}>Main Menu</button>
         </div>
       )}

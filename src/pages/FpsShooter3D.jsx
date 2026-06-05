@@ -49,6 +49,7 @@ const CABIN_CONFIGS = [
 export default function FpsShooter3D() {
   // Lobby States
   const [phase, setPhase] = useState('menu'); // menu | join_input | playing
+  const [isSoloMode, setIsSoloMode] = useState(false);
   const [gameMode, setGameMode] = useState('tdm'); // tdm | bomb | zombies
   const [startingWeapon, setStartingWeapon] = useState('ar');
   const [roomCode, setRoomCode] = useState('');
@@ -184,6 +185,8 @@ export default function FpsShooter3D() {
     gameMode: 'tdm',
     team: 'Blue',
     isHost: true,
+    matchStarted: false,
+    isSoloMode: false,
 
     // Zombies wave counters
     waveNum: 1,
@@ -240,6 +243,7 @@ export default function FpsShooter3D() {
 
   const isHost = !connRef.current || (peerRef.current && peerRef.current.id && peerRef.current.id.startsWith(ROOM_PREFIX));
   stateRef.current.isHost = isHost;
+  stateRef.current.isSoloMode = isSoloMode;
 
   // Push log helper
   const addLog = (txt, isLocalKiller) => {
@@ -832,7 +836,10 @@ export default function FpsShooter3D() {
     setPhase('playing');
     setPeerErr('');
     setMatchStarted(false);
+    stateRef.current.matchStarted = false;
     setLobbyTimer(60);
+    setIsSoloMode(false);
+    stateRef.current.isSoloMode = false;
 
     const st = stateRef.current;
     st.pos.set(-35, 0.9, -35); // House 1
@@ -857,6 +864,27 @@ export default function FpsShooter3D() {
         });
       });
     });
+  };
+
+  // Solo play - no PeerJS at all
+  const playSolo = () => {
+    cleanupPeer();
+    setRoomCode('SOLO');
+    setPhase('playing');
+    setPeerErr('');
+    setMatchStarted(false);
+    stateRef.current.matchStarted = false;
+    setLobbyTimer(60);
+    setIsSoloMode(true);
+    stateRef.current.isSoloMode = true;
+    stateRef.current.isHost = true;
+
+    const st = stateRef.current;
+    st.pos.set(-35, 0.9, -35); // House 1
+    st.oppPos.set(0, 0.9, 35); // House 8
+    st.oppTargetPos.copy(st.oppPos);
+    st.yaw = Math.PI / 4;
+    st.pitch = 0;
   };
 
   // Peer room joining
@@ -919,6 +947,7 @@ export default function FpsShooter3D() {
 
   const startMatch = () => {
     setMatchStarted(true);
+    stateRef.current.matchStarted = true;
     setScoreState({ local: 0, remote: 0 });
     resetStats();
     setMatchTimer(300);
@@ -1018,8 +1047,8 @@ export default function FpsShooter3D() {
     
     // Core game parameters
     const gravity = 28.0;
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+    const width = containerRef.current.clientWidth || window.innerWidth;
+    const height = containerRef.current.clientHeight || window.innerHeight;
 
     // 1. THREE SCENE & CAMERA
     const scene = new THREE.Scene();
@@ -1027,7 +1056,7 @@ export default function FpsShooter3D() {
     scene.fog = new THREE.FogExp2(0x050409, 0.02);
     st.scene = scene;
 
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.05, 500);
+    const camera = new THREE.PerspectiveCamera(75, (width || 1) / (height || 1), 0.05, 500);
     st.camera = camera;
 
     const camContainer = new THREE.Group();
@@ -1895,8 +1924,9 @@ export default function FpsShooter3D() {
 
     const onResize = () => {
       if (!containerRef.current) return;
-      const w = containerRef.current.clientWidth;
-      const h = containerRef.current.clientHeight;
+      const w = containerRef.current.clientWidth || window.innerWidth;
+      const h = containerRef.current.clientHeight || window.innerHeight;
+      if (w === 0 || h === 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -2031,6 +2061,7 @@ export default function FpsShooter3D() {
         oppMesh.visible = st.connected && st.gameMode !== 'zombies';
         if (st.connected) {
           oppMesh.position.lerp(st.oppTargetPos, dt * 10);
+          st.oppPos.copy(oppMesh.position);
           oppMesh.rotation.y = THREE.MathUtils.lerp(oppMesh.rotation.y, st.oppYaw, dt * 10);
           if (oppGun) oppGun.rotation.x = THREE.MathUtils.lerp(oppGun.rotation.x, st.oppPitch, dt * 10);
         }
@@ -2063,7 +2094,7 @@ export default function FpsShooter3D() {
       });
 
       // --- ZOMBIES WAVE MANAGER (Host Authority) ---
-      if (isHost && st.gameMode === 'zombies' && matchStarted) {
+      if (st.isHost && st.gameMode === 'zombies' && st.matchStarted) {
         if (st.zombiesToSpawn > 0) {
           st.spawnCooldown -= dt;
           if (st.spawnCooldown <= 0) {
@@ -2206,7 +2237,7 @@ export default function FpsShooter3D() {
 
       // --- AUTHORITATIVE BOTS SIMULATION ---
       const activeTeammateBots = st.gameMode === 'zombies';
-      if (isHost) {
+      if (st.isHost) {
         st.bots.forEach((bot) => {
           if (bot.isDead) return;
 
@@ -2216,7 +2247,7 @@ export default function FpsShooter3D() {
           let targetDist = 99999;
           let targetType = ''; // 'player' | 'opponent' | 'bot' | 'dummy' | 'zombie'
 
-          if (!matchStarted) {
+          if (!st.matchStarted) {
             // Lobby practice target dummies
             if (bot.mode === 'A') {
               const cabinDummies = st.dummies.filter(d => d.id.startsWith(`dummy_${bot.id.split('_')[1]}_`));
@@ -2265,8 +2296,9 @@ export default function FpsShooter3D() {
             }
           }
 
-          if (target) {
-            const targetPos = target.clone();
+          const targetSource = target?.isVector3 ? target : target?.pos;
+          if (targetSource?.isVector3) {
+            const targetPos = targetSource.clone();
             targetPos.y = 0.8;
             
             const dir = targetPos.clone().sub(bot.pos);
@@ -2287,7 +2319,7 @@ export default function FpsShooter3D() {
             }
           } else {
             // Default wandering behavior
-            if (bot.mode === 'B' || matchStarted) {
+            if (bot.mode === 'B' || st.matchStarted) {
               if (!bot.exitedCabin) {
                 let dx = 0, dz = 0;
                 if (bot.door === 'E') dx = 1;
@@ -2535,7 +2567,7 @@ export default function FpsShooter3D() {
       }
 
       // Authoritative Bomb Timer countdown on Host
-      if (isHost && st.gameMode === 'bomb' && st.bombPlanted && matchStarted && !st.showGameOver) {
+      if (st.isHost && st.gameMode === 'bomb' && st.bombPlanted && st.matchStarted && !st.showGameOver) {
         st.bombTimer -= dt;
         setBombTimerState(Math.ceil(st.bombTimer));
 
@@ -2583,7 +2615,7 @@ export default function FpsShooter3D() {
         broadcastSync();
 
         // Host synchronizes all bots coordinates to Guest client
-        if (isHost && connRef.current && st.connected) {
+        if (st.isHost && connRef.current && st.connected) {
           connRef.current.send({
             type: 'bots_sync',
             bots: st.bots.map(b => ({
@@ -2866,8 +2898,11 @@ export default function FpsShooter3D() {
             </div>
 
             <div className="fps-action-btns">
-              <button className="fps-action-btn" onClick={createRoom}>
-                Host Match
+              <button className="fps-action-btn" onClick={playSolo}>
+                Play Solo
+              </button>
+              <button className="fps-action-btn secondary" onClick={createRoom}>
+                Host Match (Multiplayer)
               </button>
               <button className="fps-action-btn secondary" onClick={() => setPhase('join_input')}>
                 Join Match

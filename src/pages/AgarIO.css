@@ -1,0 +1,15 @@
+.agar-root{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111;color:#eee;font-family:'Segoe UI',sans-serif;overflow:hidden;position:relative}
+.agar-root canvas{border:2px solid #333;border-radius:8px;cursor:none}
+.agar-hud{position:absolute;top:16px;right:20px;font-size:1rem;background:rgba(0,0,0,.7);padding:10px 18px;border-radius:8px;z-index:2;display:flex;flex-direction:column;gap:4px}
+.agar-hud span{color:#80deea;font-weight:700}
+.agar-mini{position:absolute;bottom:16px;right:20px;border:1px solid #555;border-radius:4px;z-index:2}
+.agar-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:5;gap:14px}
+.agar-overlay h2{font-size:2.8rem;color:#80deea;margin:0;text-shadow:0 0 20px #80deea55}
+.agar-overlay p{color:#aaa;font-size:1.1rem;margin:0}
+.agar-overlay button{padding:14px 44px;font-size:1.1rem;background:#80deea;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer}
+.agar-overlay button:hover{background:#b2ebf2}
+.agar-overlay input{padding:12px 20px;font-size:1.2rem;background:#222;color:#fff;border:2px solid #80deea;border-radius:8px;outline:none;width:200px;text-align:center}
+.agar-leader{position:absolute;top:16px;left:20px;font-size:.9rem;background:rgba(0,0,0,.7);padding:10px 16px;border-radius:8px;z-index:2}
+.agar-leader h3{margin:0 0 6px;color:#80deea;font-size:1rem}
+.agar-leader div{color:#ccc;margin:2px 0}
+.agar-leader div.me{color:#80deea;font-weight:700}

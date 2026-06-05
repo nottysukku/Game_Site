@@ -34,7 +34,7 @@ export default function TempleRunner2() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
     scene.fog = new THREE.Fog(0x1a1a2e, 10, 90);
-    const w = el.clientWidth, h = el.clientHeight;
+    const w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
     const camera = new THREE.PerspectiveCamera(70, w / h, 0.1, 200);
     camera.position.set(0, 4.5, 8);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -169,6 +169,7 @@ export default function TempleRunner2() {
       rampagePickups = [], boats = [];
     const matRampage = new THREE.MeshStandardMaterial({ color: 0xff4400, metalness: 0.8, roughness: 0.2, emissive: 0xff2200, emissiveIntensity: 0.6 });
     let animId, lastTime = 0, groundZ = 0, obsZ = -30, guardian = null, boss = null;
+    let prevBestForDisplay = +(localStorage.getItem('tr2Best') || 0);
     const LANES = [-2, 0, 2], GLEN = 20, GRAV = -0.02;
 
     const biomes = [
@@ -894,6 +895,7 @@ export default function TempleRunner2() {
     /* ============ MAIN LOOP ============ */
     function loop(now) {
       if (disposed) return;
+      if (lastTime === 0) { lastTime = now; }
       const dt = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
 
@@ -1025,7 +1027,7 @@ export default function TempleRunner2() {
       for (let i = decos.length - 1; i >= 0; i--)
         if (decos[i].position.z > 22) { scrollGroup.remove(decos[i]); decos.splice(i, 1); }
       while (groundSegs.length < 8) { groundZ -= GLEN; spawnGround(groundZ); }
-      groundZ += spd;
+      // groundZ tracks the farthest-back ground segment Z — don't drift it with spd
 
       for (let i = obstacles.length - 1; i >= 0; i--)
         if (obstacles[i].position.z > 15) { scrollGroup.remove(obstacles[i]); obstacles.splice(i, 1); }
@@ -1044,7 +1046,7 @@ export default function TempleRunner2() {
       for (let i = boats.length - 1; i >= 0; i--)
         if (boats[i].position.z > 20) { scrollGroup.remove(boats[i]); boats.splice(i, 1); }
       obsZ += spd;
-      while (obsZ > groundZ + 30) { obsZ -= 15; spawnRow(obsZ); }
+      while (obsZ > groundZ) { obsZ -= 15; spawnRow(obsZ); }
 
       // --- RAMPAGE power-up timer & auto-shooting ---
       if (gs.rampage > 0) {
@@ -1332,7 +1334,7 @@ export default function TempleRunner2() {
           if (o.userData.type === 'jump') {
             const dx = Math.abs(player.position.x - o.position.x);
             if (dx < 0.9 && dz < 0.6 && ps.y < 0.8) { die(); return; }
-          } else if (o.userData.type === 'duck' && dz < 0.5 && !ps.ducking && ps.y < o.position.y - 0.6) { die(); return; }
+          } else if (o.userData.type === 'duck' && dz < 0.5 && !ps.ducking && ps.y < 1.0) { die(); return; }
         }
         for (const m of movingObs) {
           const dx = Math.abs(player.position.x - m.position.x);
@@ -1572,7 +1574,8 @@ export default function TempleRunner2() {
       if (gs.superMode) { superdie(); return; }
       gs.over = true; gs.started = false; gs.deathAnim = 0.8;
       const finalScore = Math.floor(gs.dist * gs.mult);
-      if (finalScore > bestScore) { setBestScore(finalScore); localStorage.setItem('tr2Best', String(finalScore)); }
+      const oldBest = +(localStorage.getItem('tr2Best') || 0);
+      if (finalScore > oldBest) { localStorage.setItem('tr2Best', String(finalScore)); }
       setPowerUp(null); setCombo(0); setMultiplier(1); shieldBubble.visible = false;
       gs.rampage = 0; setRampage(false);
       body.material.emissive = new THREE.Color(0x000000); body.material.emissiveIntensity = 0;
@@ -1716,7 +1719,7 @@ export default function TempleRunner2() {
 
     /* ============ KEY / TOUCH ============ */
     function onKey(e) {
-      if (e.code === 'Z' && (e.ctrlKey || e.metaKey)) {
+      if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         activateSuperMode();
         return;
@@ -1747,7 +1750,7 @@ export default function TempleRunner2() {
 
     function onResize() {
       if (!mountRef.current) return;
-      const w2 = mountRef.current.clientWidth, h2 = mountRef.current.clientHeight;
+      const w2 = mountRef.current.clientWidth || window.innerWidth, h2 = mountRef.current.clientHeight || window.innerHeight;
       camera.aspect = w2 / h2; camera.updateProjectionMatrix(); renderer.setSize(w2, h2);
     }
 
@@ -1819,7 +1822,8 @@ export default function TempleRunner2() {
             <button className="tr2-pause-btn" onClick={() => fnRef.current.togglePause?.()}>⏸</button>
             <div className="tr2-right">
               <div className="tr2-coins">🪙 {coins}</div>
-              <div className="tr2-ammo">🔫 {ammo}</div>
+              <div className="tr2-ammo">🔫 {ammo} &nbsp; 💣 {grenades}</div>
+              <div className="tr2-ammo" style={{fontSize:'0.85rem',opacity:0.8}}>🗡️ {weaponName}</div>
               <button className="tr2-btn super" style={{padding:'6px 10px', fontSize:'0.8em', pointerEvents:'auto'}} onClick={() => fnRef.current.enableSuperMode?.()}>
                 ⚡ SUPER
               </button>
@@ -1848,7 +1852,7 @@ export default function TempleRunner2() {
         <div className="tr2-overlay">
           <h1 className="tr2-title dead">GAME OVER</h1>
           <p className="tr2-sub">Score: {score.toLocaleString()}</p>
-          {score > bestScore && <p className="tr2-sub new">🎉 NEW BEST!</p>}
+          {score > 0 && score >= bestScore && <p className="tr2-sub new">🎉 NEW BEST!</p>}
           <p className="tr2-sub">Coins: {coins}</p>
           {bestScore > 0 && <p className="tr2-sub sm">Best: {bestScore.toLocaleString()}</p>}
           {canResurrect && (

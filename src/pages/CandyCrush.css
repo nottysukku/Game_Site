@@ -1,0 +1,18 @@
+.candy-root{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#1a0a2e,#0a1a2e);color:#eee;font-family:'Segoe UI',sans-serif;overflow:hidden;position:relative}
+.candy-board{display:grid;grid-template-columns:repeat(8,56px);grid-template-rows:repeat(8,56px);gap:3px;background:rgba(255,255,255,.05);padding:8px;border-radius:12px;border:2px solid #ce93d844;position:relative}
+.candy-cell{width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:2rem;border-radius:8px;cursor:pointer;transition:all .15s;background:rgba(255,255,255,.04);user-select:none;position:relative}
+.candy-cell:hover{background:rgba(255,255,255,.12);transform:scale(1.05)}
+.candy-cell.selected{background:rgba(206,147,216,.3);box-shadow:0 0 12px #ce93d855;transform:scale(1.1)}
+.candy-cell.hint{animation:candyHint .6s ease-in-out infinite alternate}
+@keyframes candyHint{from{transform:scale(1)}to{transform:scale(1.15)}}
+.candy-cell.matched{animation:candyPop .3s ease-out forwards}
+@keyframes candyPop{0%{transform:scale(1);opacity:1}100%{transform:scale(0);opacity:0}}
+.candy-hud{display:flex;gap:24px;font-size:1.1rem;font-weight:700;margin-bottom:16px;color:#fff}
+.candy-hud span{color:#ce93d8}
+.candy-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:5;gap:14px}
+.candy-overlay h2{font-size:2.8rem;color:#ce93d8;margin:0;text-shadow:0 0 20px #ce93d855}
+.candy-overlay p{color:#aaa;font-size:1.1rem;margin:0}
+.candy-overlay button{padding:14px 44px;font-size:1.1rem;background:#ce93d8;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer}
+.candy-overlay button:hover{background:#e1bee7}
+.candy-combo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2rem;font-weight:700;color:#ffd740;text-shadow:0 0 20px #ffd740;pointer-events:none;z-index:3;animation:comboFade .8s ease-out forwards}
+@keyframes comboFade{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-80%) scale(1.5)}}

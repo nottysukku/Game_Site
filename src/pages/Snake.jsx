@@ -150,10 +150,11 @@ export default function Snake() {
     }
 
     function loop(time) {
-      if (!running) { draw(); return; }
-      if (time - lastTime > Math.max(50, 130 - spd * 15)) {
-        lastTime = time;
-        update();
+      if (running) {
+        if (time - lastTime > Math.max(50, 130 - spd * 15)) {
+          lastTime = time;
+          update();
+        }
       }
       draw();
       animId = requestAnimationFrame(loop);
@@ -171,7 +172,7 @@ export default function Snake() {
     init();
     stateRef.current = {
       running: true,
-      restart: () => { init(); animId = requestAnimationFrame(loop); }
+      restart: () => { init(); }
     };
     animId = requestAnimationFrame(loop);
 

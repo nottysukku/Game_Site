@@ -38,17 +38,21 @@ export default function NeonTagArena() {
   const [status, setStatus] = useState('One runner is IT. Tag to transfer the chase.');
 
   useEffect(() => {
-    const down = e => { keysRef.current[e.code] = true; };
+    const down = e => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+      keysRef.current[e.code] = true;
+    };
     const up = e => { keysRef.current[e.code] = false; };
-    window.addEventListener('keydown', down);
+    window.addEventListener('keydown', down, { passive: false });
     window.addEventListener('keyup', up);
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
+      cancelAnimationFrame(engineRef.current?.raf);
     };
   }, []);
 
-  useEffect(() => () => cancelAnimationFrame(engineRef.current?.raf), []);
+
 
   const start = () => {
     const players = [
@@ -59,6 +63,7 @@ export default function NeonTagArena() {
       players,
       it: Math.floor(Math.random() * 4),
       time: 90,
+      over: false,
       pellets: [
         { x: 450, y: 130, kind: 'boost' },
         { x: 450, y: 430, kind: 'freeze' },
@@ -80,7 +85,7 @@ export default function NeonTagArena() {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     const engine = engineRef.current;
-    if (!canvas || !ctx || !engine || phase === 'over') return;
+    if (!canvas || !ctx || !engine || engine.over) return;
 
     const dt = Math.min(0.04, (now - engine.last) / 1000);
     engine.last = now;
@@ -182,8 +187,9 @@ export default function NeonTagArena() {
     setTime(engine.time);
     setScores(engine.players.map(p => p.score));
     if (engine.time <= 0) {
-      const winner = engine.players.reduce((best, p) => (p.score > best.score ? p : best), engine.players[0]);
-      setStatus(`${PLAYERS[winner.id].name} wins by holding IT the longest.`);
+      engine.over = true;
+      const winner = engine.players.reduce((best, p) => (p.score < best.score ? p : best), engine.players[0]);
+      setStatus(`${PLAYERS[winner.id].name} wins by avoiding IT the most!`);
       setPhase('over');
       return;
     }

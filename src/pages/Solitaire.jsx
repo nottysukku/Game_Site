@@ -98,10 +98,26 @@ export default function Solitaire() {
 
       if (source === 'foundation' && cards.length === 1) {
         if (canPlaceOnFoundation(cards[0], colIdx)) {
+          // Build new foundations with the card added
           const newF = foundations.map(f => [...f]);
           newF[colIdx] = [...newF[colIdx], cards[0]];
-          removeFromSource(selected);
           setFoundations(newF);
+          // Remove from source (handle tableau source in one update to avoid race)
+          if (selected.source === 'waste') {
+            setWaste(w => { const n = [...w]; n.pop(); return n; });
+          } else if (selected.source === 'tableau') {
+            setTableau(prev => {
+              const n = prev.map(c => [...c]);
+              n[selected.colIdx] = n[selected.colIdx].slice(0, selected.cardIdx);
+              if (n[selected.colIdx].length > 0) n[selected.colIdx][n[selected.colIdx].length - 1].faceUp = true;
+              return n;
+            });
+          } else if (selected.source === 'foundation') {
+            // Moving between foundations - already handled by newF, but src foundation needs trimming
+            const newF2 = newF.map(f => [...f]);
+            newF2[selected.colIdx] = newF2[selected.colIdx].slice(0, -1);
+            setFoundations(newF2);
+          }
           setMoves(m => m + 1);
           setSelected(null);
           return;
@@ -109,10 +125,31 @@ export default function Solitaire() {
       }
       if (source === 'tableau') {
         if (canPlaceOnTableau(cards[0], colIdx)) {
-          const newTab = tableau.map(c => [...c]);
-          newTab[colIdx] = [...newTab[colIdx], ...cards];
-          removeFromSource(selected);
-          setTableau(newTab);
+          if (selected.source === 'tableau') {
+            // Both source and dest are tableau - do it in one update
+            setTableau(prev => {
+              const n = prev.map(c => [...c]);
+              const moving = n[selected.colIdx].slice(selected.cardIdx);
+              n[selected.colIdx] = n[selected.colIdx].slice(0, selected.cardIdx);
+              if (n[selected.colIdx].length > 0) n[selected.colIdx][n[selected.colIdx].length - 1].faceUp = true;
+              n[colIdx] = [...n[colIdx], ...moving];
+              return n;
+            });
+          } else {
+            // Source is waste or foundation
+            const newTab = tableau.map(c => [...c]);
+            newTab[colIdx] = [...newTab[colIdx], ...cards];
+            setTableau(newTab);
+            if (selected.source === 'waste') {
+              setWaste(w => { const n = [...w]; n.pop(); return n; });
+            } else if (selected.source === 'foundation') {
+              setFoundations(prev => {
+                const n = prev.map(f => [...f]);
+                n[selected.colIdx] = n[selected.colIdx].slice(0, -1);
+                return n;
+              });
+            }
+          }
           setMoves(m => m + 1);
           setSelected(null);
           return;
@@ -129,33 +166,28 @@ export default function Solitaire() {
     }
   };
 
-  const removeFromSource = (sel) => {
-    if (sel.source === 'waste') {
-      setWaste(w => { const n = [...w]; n.pop(); return n; });
-    } else if (sel.source === 'tableau') {
-      setTableau(prev => {
-        const n = prev.map(c => [...c]);
-        n[sel.colIdx] = n[sel.colIdx].slice(0, sel.cardIdx);
-        if (n[sel.colIdx].length > 0) n[sel.colIdx][n[sel.colIdx].length - 1].faceUp = true;
-        return n;
-      });
-    } else if (sel.source === 'foundation') {
-      setFoundations(prev => {
-        const n = prev.map(f => [...f]);
-        n[sel.colIdx] = n[sel.colIdx].slice(0, -1);
-        return n;
-      });
-    }
-  };
-
   // Auto-complete to foundation on double click
   const autoFoundation = (card, source, colIdx, cardIdx) => {
     for (let i = 0; i < 4; i++) {
       if (canPlaceOnFoundation(card, i)) {
         const newF = foundations.map(f => [...f]);
         newF[i] = [...newF[i], card];
-        removeFromSource({ source, colIdx, cardIdx });
         setFoundations(newF);
+        if (source === 'waste') {
+          setWaste(w => { const n = [...w]; n.pop(); return n; });
+        } else if (source === 'tableau') {
+          setTableau(prev => {
+            const n = prev.map(c => [...c]);
+            n[colIdx] = n[colIdx].slice(0, cardIdx);
+            if (n[colIdx].length > 0) n[colIdx][n[colIdx].length - 1].faceUp = true;
+            return n;
+          });
+        } else if (source === 'foundation') {
+          // Edge case: moving between foundations
+          const newF2 = newF.map(f => [...f]);
+          newF2[colIdx] = newF2[colIdx].slice(0, -1);
+          setFoundations(newF2);
+        }
         setMoves(m => m + 1);
         setSelected(null);
         return true;

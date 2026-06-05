@@ -207,9 +207,10 @@ export default function Breakout() {
 
       // Particles
       particles.forEach(pt => {
-        const a = Math.round(pt.life * 255).toString(16).padStart(2, '0');
-        ctx.fillStyle = pt.color + a;
+        ctx.globalAlpha = pt.life;
+        ctx.fillStyle = pt.color;
         ctx.beginPath(); ctx.arc(pt.x, pt.y, 3 * pt.life, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
       });
     }
 

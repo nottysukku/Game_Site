@@ -1,0 +1,48 @@
+.gshooter-root {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100vh; background: #0a0e1a; color: #eee; font-family: 'Segoe UI', sans-serif;
+  overflow: hidden; position: relative;
+}
+.gshooter-root canvas { border: 2px solid #69f0ae44; border-radius: 8px; }
+.gshooter-menu {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; background: rgba(0,0,0,.85);
+  z-index: 5; gap: 16px;
+}
+.gshooter-menu h2 { font-size: 2.5rem; color: #69f0ae; margin: 0; text-shadow: 0 0 20px #69f0ae55; }
+.gshooter-menu p { color: #888; font-size: 1rem; margin: 0; max-width: 500px; text-align: center; }
+.gshooter-mode-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.gshooter-mode-btns button {
+  padding: 14px 28px; font-size: 1rem; border: 2px solid #334; border-radius: 10px;
+  background: #131830; color: #ccc; cursor: pointer; transition: all .2s;
+}
+.gshooter-mode-btns button:hover {
+  border-color: #69f0ae; color: #69f0ae; transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(105,240,174,.15);
+}
+.gshooter-hud {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 20px; z-index: 2; font-size: .9rem;
+}
+.gshooter-hp-bar {
+  display: flex; align-items: center; gap: 6px; background: rgba(10,14,26,.8);
+  padding: 4px 12px; border-radius: 8px; border: 1px solid #334;
+}
+.gshooter-hp-fill {
+  width: 80px; height: 10px; border-radius: 5px; background: #333; overflow: hidden;
+}
+.gshooter-hp-fill div { height: 100%; border-radius: 5px; transition: width .2s; }
+.gshooter-winner {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; background: rgba(0,0,0,.85);
+  z-index: 5; gap: 12px;
+}
+.gshooter-winner h2 { font-size: 2.5rem; color: #ffd740; margin: 0; }
+.gshooter-winner button {
+  padding: 12px 36px; font-size: 1.1rem; background: #69f0ae; color: #000;
+  border: none; border-radius: 8px; font-weight: 700; cursor: pointer;
+}
+.gshooter-controls {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  color: #555; font-size: .75rem; z-index: 2; text-align: center; max-width: 80%;
+}

@@ -14,11 +14,13 @@ export default function Badminton() {
     let animationId;
 
     const keys = {};
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
-    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+    const handleKeyDown = (e) => { keys[e.code] = true; e.preventDefault(); };
+    const handleKeyUp = (e) => { keys[e.code] = false; };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
     // Physics
-    const GRAVITY = 0.5;
+    const GRAVITY = 0.35;
     const groundY = 550;
     const net = { x: 500, y: 350, w: 10, h: 200 };
 
@@ -316,15 +318,19 @@ export default function Badminton() {
         }
         
         // Gravity
-        this.vy += GRAVITY * 0.6; 
+        this.vy += GRAVITY * 0.5; 
         
-        // Aerodynamic drag (shuttlecock has high drag, reduced slightly for better clears)
+        // Aerodynamic drag — gentle so shots can cross the full court
         const speed = Math.hypot(this.vx, this.vy);
-        const drag = 0.0055 * speed * speed;
-        
         if (speed > 0) {
+          // Quadratic drag (very light)
+          const dragCoeff = 0.0006;
+          const drag = dragCoeff * speed * speed;
           this.vx -= (this.vx / speed) * drag;
           this.vy -= (this.vy / speed) * drag;
+          // Small linear damping
+          this.vx *= 0.998;
+          this.vy *= 0.998;
         }
 
         this.x += this.vx;
@@ -440,32 +446,26 @@ export default function Badminton() {
           const isSmash = player.swingType === 'downstroke';
 
           if (isServeLaunch) {
-            // Perfect serve arch — high enough to clear the net easily
-            bx = player.isPlayer2 ? -29 : 29;
-            by = -21;
+            // Powerful serve arc — easily clears the net
+            bx = player.isPlayer2 ? -18 : 18;
+            by = -14;
             spawnParticles(birdie.x, birdie.y, '#fff', 12, 4);
           } else {
-            const hitAngle = Math.atan2(birdie.y - racketPos.y, birdie.x - racketPos.x);
-            let power = isSmash ? 34 : 26;
-
-            bx = Math.cos(hitAngle) * power + player.vx * 0.5;
-            by = Math.sin(hitAngle) * power;
-
             if (isSmash) {
-               bx = player.isPlayer2 ? -34 : 34;
-               by = 18; // smash down hard
+               // Smash: fast and steep but still crosses net
+               bx = player.isPlayer2 ? -22 : 22;
+               by = -4; // slight upward to clear net, then gravity brings it down
                screenShake = 22;
                spawnParticles(racketPos.x, racketPos.y, '#ffd166', 30, 8);
                setAnnouncement("SMASH!");
-               setTimeout(() => { if (announcement === "SMASH!") setAnnouncement("") }, 1000);
+               setTimeout(() => setAnnouncement(""), 1000);
             } else {
-               by = -18; // clear higher
-               if (player.isPlayer2) {
-                 if (bx > -20) bx = -22;
-               } else {
-                 if (bx < 20) bx = 22;
-               }
+               // Clear/lob: high arc that comfortably crosses the court
+               bx = player.isPlayer2 ? -14 : 14;
+               by = -16;
             }
+            // Add player momentum
+            bx += player.vx * 0.3;
             spawnParticles(racketPos.x, racketPos.y, '#fff', 10, 5);
           }
 
@@ -583,6 +583,8 @@ export default function Badminton() {
 
     return () => {
       cancelAnimationFrame(animationId);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
 

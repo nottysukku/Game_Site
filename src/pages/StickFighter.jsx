@@ -365,14 +365,21 @@ export default function StickFighter() {
     return group;
   };
 
+  const getViewportSize = () => {
+    const container = containerRef.current;
+    return {
+      w: Math.max(1, container?.clientWidth || window.innerWidth || 1),
+      h: Math.max(1, container?.clientHeight || window.innerHeight || 1),
+    };
+  };
+
   const initThree = () => {
     const state = stateRef.current;
     const three = threeRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !containerRef.current) return;
 
-    const w = containerRef.current.clientWidth || window.innerWidth;
-    const h = containerRef.current.clientHeight || window.innerHeight;
+    const { w, h } = getViewportSize();
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -463,8 +470,8 @@ export default function StickFighter() {
     three.powerupMesh = pUpMesh;
 
     const resize = () => {
-      const wWidth = containerRef.current.clientWidth || window.innerWidth;
-      const wHeight = containerRef.current.clientHeight || window.innerHeight;
+      if (!containerRef.current) return;
+      const { w: wWidth, h: wHeight } = getViewportSize();
       camera.aspect = wWidth / wHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(wWidth, wHeight);

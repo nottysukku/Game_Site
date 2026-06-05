@@ -32,22 +32,23 @@ export default function DoodleJump() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    const s = {
+    stateRef.current = {
       px: W / 2 - PW / 2, py: H - 100,
       vx: 0, vy: 0,
       platforms: genPlatforms(),
       score: 0, maxY: H - 100,
       keys: {}, gameOver: false,
     };
-    stateRef.current = s;
 
-    const keyDown = (e) => { s.keys[e.key] = true; };
-    const keyUp = (e) => { s.keys[e.key] = false; };
+    const keyDown = (e) => { if (stateRef.current) stateRef.current.keys[e.key] = true; };
+    const keyUp = (e) => { if (stateRef.current) stateRef.current.keys[e.key] = false; };
     window.addEventListener('keydown', keyDown);
     window.addEventListener('keyup', keyUp);
 
     let af;
     const loop = () => {
+      const s = stateRef.current;
+      if (!s) { af = requestAnimationFrame(loop); return; }
       if (!s.gameOver) update(s);
       draw(ctx, s);
       af = requestAnimationFrame(loop);
@@ -179,12 +180,7 @@ export default function DoodleJump() {
     setGameOver(false);
   };
 
-  // Need to update stateRef on restart
-  useEffect(() => {
-    if (stateRef.current && !gameOver) {
-      // Re-ref
-    }
-  }, [gameOver]);
+
 
   return (
     <div className="dj-root">
